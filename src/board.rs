@@ -1,11 +1,12 @@
 use core::fmt;
 use std::slice::Iter;
-use self::RowLetter::*;
+use self::ColumnLetter::*;
 
 use crate::pieces::*;
 
+
 #[derive(Debug)]
-pub enum RowLetter {
+pub enum ColumnLetter {
     A,
     B,
     C,
@@ -16,48 +17,48 @@ pub enum RowLetter {
     H
 }
 
-impl RowLetter {
+impl ColumnLetter {
    pub fn eval(&self) -> usize {
     match self {
-         RowLetter::A => 0,
-         RowLetter::B => 1,
-         RowLetter::C => 2,
-         RowLetter::D => 3,
-         RowLetter::E => 4,
-         RowLetter::F => 5,
-         RowLetter::G => 6,
-         RowLetter::H => 7
+         ColumnLetter::A => 0,
+         ColumnLetter::B => 1,
+         ColumnLetter::C => 2,
+         ColumnLetter::D => 3,
+         ColumnLetter::E => 4,
+         ColumnLetter::F => 5,
+         ColumnLetter::G => 6,
+         ColumnLetter::H => 7
     }
    } 
 
-   pub fn iterator() -> Iter<'static, RowLetter> {
-    static LETTERS: [RowLetter; 8] = [A, B, C, D, E, F, G, H];
+   pub fn iterator() -> Iter<'static, ColumnLetter> {
+    static LETTERS: [ColumnLetter; 8] = [A, B, C, D, E, F, G, H];
     LETTERS.iter()
    } 
 
-   pub fn convert_to(letter: char) -> Result<RowLetter, &'static str> {
+   pub fn convert_to(letter: char) -> Result<ColumnLetter, &'static str> {
     match letter {
-        'a' => Ok(RowLetter::A),
-        'b' => Ok(RowLetter::B),
-        'c' => Ok(RowLetter::C),
-        'd' => Ok(RowLetter::D),
-        'e' => Ok(RowLetter::E),
-        'f' => Ok(RowLetter::F),
-        'g' => Ok(RowLetter::G),
-        'h' => Ok(RowLetter::H),
+        'a' => Ok(ColumnLetter::A),
+        'b' => Ok(ColumnLetter::B),
+        'c' => Ok(ColumnLetter::C),
+        'd' => Ok(ColumnLetter::D),
+        'e' => Ok(ColumnLetter::E),
+        'f' => Ok(ColumnLetter::F),
+        'g' => Ok(ColumnLetter::G),
+        'h' => Ok(ColumnLetter::H),
         _ => Err("Not a valid col")
     }
    }
 }
 
-impl fmt::Display for RowLetter {
+impl fmt::Display for ColumnLetter {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
 pub struct Coordinates {
-    pub letter: RowLetter,
+    pub letter: ColumnLetter,
     pub number: usize
 }
 
@@ -201,7 +202,7 @@ impl fmt::Display for Board {
             print!("{}\n", row);
         }
         print!("    ");
-        for letter in RowLetter::iterator() {
+        for letter in ColumnLetter::iterator() {
             print!("[{} ]", letter)
         }
         Ok(())
