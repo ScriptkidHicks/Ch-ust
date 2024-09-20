@@ -1,5 +1,6 @@
 use crate::board::*;
 use crate::pieces::*;
+use crate::rules::*;
 
 fn parse_char_to_int(row_number: char) -> Result<usize, &'static str> {
     match row_number {

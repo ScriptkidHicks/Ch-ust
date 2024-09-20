@@ -17,6 +17,12 @@ pub enum ColumnLetter {
     H
 }
 
+impl PartialEq for ColumnLetter {
+    fn eq(&self, other: &Self) -> bool {
+        self == other
+    }
+}
+
 impl ColumnLetter {
    pub fn eval(&self) -> usize {
     match self {
@@ -57,9 +63,56 @@ impl fmt::Display for ColumnLetter {
     }
 }
 
+pub struct SquareToSquareInformation {
+    pub trueDiagonal: bool,
+    pub trueVertOrLat: bool,
+    pub trueJHook: bool,
+    pub forwardMove: bool,
+    pub distance: usize
+
+}
 pub struct Coordinates {
     pub letter: ColumnLetter,
     pub number: usize
+}
+
+impl Coordinates {
+    pub fn measure_distance(&self, other: Coordinates) -> SquareToSquareInformation {
+        let mut is_lat = false;
+        let mut is_vert = false;
+        let mut is_diag = false;
+        let mut is_j = false;
+        let mut distance: usize = 0;
+        let mut lat_distance: usize = 0;
+        let mut vert_distance: usize = 0;
+
+        if (self.letter == other.letter) {
+            is_vert = true;
+        }
+
+        if (self.number == other.number) {
+            is_lat = true;
+        }
+
+        lat_distance = self.letter.eval() - other.letter.eval(); 
+        vert_distance = self.number - other.number;
+
+        if (!is_lat && !is_vert && vert_distance == lat_distance && lat_distance != 0) {
+            is_diag = true;
+        }
+
+        if ((lat_distance == 1 && vert_distance == 2) || (vert_distance == 1 && lat_distance == 2)){
+            is_j = true;
+        }
+
+        SquareToSquareInformation {
+            trueDiagonal: is_diag,
+            trueVertOrLat: is_lat || is_vert,
+            trueJHook: is_j,
+            forwardMove: true,
+            distance: lat_distance + vert_distance
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -146,8 +199,27 @@ impl Row {
     }
 }
 
+struct SideInformation {
+    taken_pieces: Vec<PieceKind>,
+    can_castle_kingside: bool,
+    can_castle_queenside: bool
+}
+
+impl SideInformation {
+    pub fn default () -> Self {
+        SideInformation {
+            taken_pieces: Vec::new(),
+            can_castle_kingside: true,
+            can_castle_queenside: false
+        }
+    }
+}
+
 pub struct Board {
-    rows: [Row; 8]
+    rows: [Row; 8],
+    turn: PieceColor,
+    white_side_information: SideInformation,
+    black_side_information: SideInformation
 }
 
 impl Board {
@@ -162,7 +234,10 @@ impl Board {
                 Row::default(),
                 Row::pawn_row(PieceColor::White),
                 Row::default_back_row(PieceColor::White)
-            ]
+            ],
+            turn: PieceColor::White,
+            white_side_information: SideInformation::default(),
+            black_side_information: SideInformation::default()
         }
     }
     

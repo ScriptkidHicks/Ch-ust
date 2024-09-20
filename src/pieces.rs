@@ -39,6 +39,16 @@ impl fmt::Display for PieceKind {
     }
 }
 
+impl PieceKind {
+    pub fn get_range(&self) -> u32 {
+        match self {
+            PieceKind::Pawn | PieceKind::King => 1,
+            PieceKind::Knight => 2,
+            _ => 8
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct Piece {
     pub color: PieceColor,

@@ -4,6 +4,7 @@ use interface::parse_square;
 mod board;
 mod pieces;
 mod interface;
+mod rules;
 fn main() {
     let mut default_board = Board::default();
 
