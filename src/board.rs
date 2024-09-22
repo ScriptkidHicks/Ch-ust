@@ -1,5 +1,5 @@
 use core::fmt;
-use std::slice::Iter;
+use std::{iter::TakeWhile, slice::Iter};
 use self::ColumnLetter::*;
 
 use crate::{pieces::*, rules::parse_move_legality};
@@ -64,10 +64,17 @@ impl fmt::Display for ColumnLetter {
     }
 }
 
+pub enum MoveDirection {
+    Verticle,
+    Lateral,
+    Diagonal,
+    JHook,
+    NoMove,
+    IllegalMove
+}
+
 pub struct SquareToSquareInformation {
-    pub trueDiagonal: bool,
-    pub trueVertOrLat: bool,
-    pub trueJHook: bool,
+    pub move_direction: MoveDirection,
     pub distance: usize
 
 }
@@ -77,38 +84,32 @@ pub struct Coordinates {
 }
 
 pub fn measure_distance(from: &Coordinates, to: &Coordinates) -> SquareToSquareInformation {
-    let mut is_lat = false;
-    let mut is_vert = false;
-    let mut is_diag = false;
-    let mut is_j = false;
-    let mut distance: usize = 0;
-    let mut lat_distance: usize = 0;
-    let mut vert_distance: usize = 0;
+    let garnered_move_direction: MoveDirection;
+
+    let lat_distance = usize_difference(from.letter.eval(), to.letter.eval()); 
+
+    let vert_distance = usize_difference(from.number, to.number);
 
     if from.letter == to.letter {
-        is_vert = true;
-    }
-
-    if (from.number == to.number) {
-        is_lat = true;
-    }
-
-    lat_distance = usize_difference(from.letter.eval(), to.letter.eval()); 
-
-    vert_distance = usize_difference(from.number, to.number);
-
-    if !is_lat && !is_vert && vert_distance == lat_distance && lat_distance != 0 {
-        is_diag = true;
-    }
-
-    if (lat_distance == 1 && vert_distance == 2) || (vert_distance == 1 && lat_distance == 2){
-        is_j = true;
+        if from.number == to.number {
+            garnered_move_direction = MoveDirection::NoMove;
+        } else {
+            garnered_move_direction = MoveDirection::Verticle;
+        }
+    } else if from.number == to.number {
+        garnered_move_direction = MoveDirection::Lateral;
+    } else {
+        if lat_distance == vert_distance {
+            garnered_move_direction = MoveDirection::Diagonal;
+        } else if (lat_distance == 1 && vert_distance == 2) || (vert_distance == 1 && lat_distance == 2) {
+            garnered_move_direction = MoveDirection::JHook;
+        } else {
+            garnered_move_direction = MoveDirection::IllegalMove;
+        }
     }
 
     SquareToSquareInformation {
-        trueDiagonal: is_diag,
-        trueVertOrLat: is_lat || is_vert,
-        trueJHook: is_j,
+        move_direction: garnered_move_direction,
         distance: lat_distance + vert_distance
     }
 }
@@ -211,6 +212,10 @@ impl SideInformation {
             can_castle_queenside: false
         }
     }
+
+    pub fn add_taken_piece (&mut self, piece_kind: PieceKind) {
+        self.taken_pieces.push(piece_kind);
+    }
 }
 
 pub struct Board {
@@ -253,11 +258,15 @@ impl Board {
 
     pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) {
         let from_square = self.retreive_square(&from);
+        let to_square = self.retreive_square(&to);
         let mut move_legal = false;
+        let mut taking_piece = false;
+        let mut target_piece_kind = PieceKind::Pawn;
+        let mut target_piece_color = PieceColor::Black;
         let mut replacement_square = Square::Empty;
         match from_square {
             Square::Full(piece) => {
-                move_legal = parse_move_legality(piece.kind, from, to, self);
+                (move_legal, taking_piece, target_piece_color, target_piece_kind) = parse_move_legality(piece.kind, from, to, self);
                 //to_square = Square::Full(piece.clone());
                 replacement_square = Square::Full(piece.clone());
                 ()}, //
@@ -266,12 +275,40 @@ impl Board {
         if move_legal {
             self.set_square(&from, Square::Empty);
             self.set_square(&to, replacement_square);
+            if (taking_piece) {
+                self.add_piece_to_kills(target_piece_kind, target_piece_color);
+            }
         }
+    }
+
+    pub fn add_piece_to_kills(&mut self, piece_kind: PieceKind, piece_color: PieceColor) {
+        match piece_color {
+            PieceColor::Black => self.white_side_information.add_taken_piece(piece_kind),
+            PieceColor::White => self.black_side_information.add_taken_piece(piece_kind),
+        }
+    }
+
+    pub fn show_taken_pieces(&self, color: PieceColor) {
+        print!("\n< ");
+        match color {
+            PieceColor::Black => {
+                for piece in self.black_side_information.taken_pieces.iter() {
+                    print!("{} ", piece);
+                }
+            },
+            PieceColor::White => {
+                for piece in self.white_side_information.taken_pieces.iter() {
+                    print!("{} ", piece);
+                }
+            }
+        }
+        println!(">");
     }
 }
 
 impl fmt::Display for Board {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
+        self.show_taken_pieces(PieceColor::Black);
         let mut i = 8;
         for row in self.rows.iter() {
             print!("[{} ]", i);
@@ -282,6 +319,7 @@ impl fmt::Display for Board {
         for letter in ColumnLetter::iterator() {
             print!("[{} ]", letter)
         }
+        self.show_taken_pieces(PieceColor::White);
         Ok(())
     }
 }
