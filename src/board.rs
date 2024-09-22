@@ -2,10 +2,17 @@ use core::fmt;
 use std::slice::Iter;
 use self::ColumnLetter::*;
 
-use crate::pieces::*;
+use crate::{pieces::*, rules::parse_move_legality};
 
+pub fn usize_difference(a: usize, b: usize) -> usize {
+    if a > b { 
+        a - b
+    } else {
+        b - a
+    }
+}
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ColumnLetter {
     A,
     B,
@@ -15,12 +22,6 @@ pub enum ColumnLetter {
     F,
     G,
     H
-}
-
-impl PartialEq for ColumnLetter {
-    fn eq(&self, other: &Self) -> bool {
-        self == other
-    }
 }
 
 impl ColumnLetter {
@@ -67,7 +68,6 @@ pub struct SquareToSquareInformation {
     pub trueDiagonal: bool,
     pub trueVertOrLat: bool,
     pub trueJHook: bool,
-    pub forwardMove: bool,
     pub distance: usize
 
 }
@@ -76,42 +76,40 @@ pub struct Coordinates {
     pub number: usize
 }
 
-impl Coordinates {
-    pub fn measure_distance(&self, other: Coordinates) -> SquareToSquareInformation {
-        let mut is_lat = false;
-        let mut is_vert = false;
-        let mut is_diag = false;
-        let mut is_j = false;
-        let mut distance: usize = 0;
-        let mut lat_distance: usize = 0;
-        let mut vert_distance: usize = 0;
+pub fn measure_distance(from: &Coordinates, to: &Coordinates) -> SquareToSquareInformation {
+    let mut is_lat = false;
+    let mut is_vert = false;
+    let mut is_diag = false;
+    let mut is_j = false;
+    let mut distance: usize = 0;
+    let mut lat_distance: usize = 0;
+    let mut vert_distance: usize = 0;
 
-        if (self.letter == other.letter) {
-            is_vert = true;
-        }
+    if from.letter == to.letter {
+        is_vert = true;
+    }
 
-        if (self.number == other.number) {
-            is_lat = true;
-        }
+    if (from.number == to.number) {
+        is_lat = true;
+    }
 
-        lat_distance = self.letter.eval() - other.letter.eval(); 
-        vert_distance = self.number - other.number;
+    lat_distance = usize_difference(from.letter.eval(), to.letter.eval()); 
 
-        if (!is_lat && !is_vert && vert_distance == lat_distance && lat_distance != 0) {
-            is_diag = true;
-        }
+    vert_distance = usize_difference(from.number, to.number);
 
-        if ((lat_distance == 1 && vert_distance == 2) || (vert_distance == 1 && lat_distance == 2)){
-            is_j = true;
-        }
+    if !is_lat && !is_vert && vert_distance == lat_distance && lat_distance != 0 {
+        is_diag = true;
+    }
 
-        SquareToSquareInformation {
-            trueDiagonal: is_diag,
-            trueVertOrLat: is_lat || is_vert,
-            trueJHook: is_j,
-            forwardMove: true,
-            distance: lat_distance + vert_distance
-        }
+    if (lat_distance == 1 && vert_distance == 2) || (vert_distance == 1 && lat_distance == 2){
+        is_j = true;
+    }
+
+    SquareToSquareInformation {
+        trueDiagonal: is_diag,
+        trueVertOrLat: is_lat || is_vert,
+        trueJHook: is_j,
+        distance: lat_distance + vert_distance
     }
 }
 
@@ -245,26 +243,30 @@ impl Board {
         7 - (size - 1)
     }
 
-    fn retreive_square(&mut self, coords: &Coordinates) -> &mut Square {
-        &mut self.rows[Self::convert_row_usize(coords.number)].squares[coords.letter.eval()]
+    pub fn retreive_square(&self, coords: &Coordinates) -> &Square {
+        &self.rows[Self::convert_row_usize(coords.number)].squares[coords.letter.eval()]
     }
 
     fn set_square(&mut self, coords: &Coordinates, square: Square) {
         self.rows[Self::convert_row_usize(coords.number)].squares[coords.letter.eval()] = square;
     }
 
-    pub fn move_piece(&mut self, from: Coordinates, to: Coordinates) {
+    pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) {
         let from_square = self.retreive_square(&from);
+        let mut move_legal = false;
         let mut replacement_square = Square::Empty;
         match from_square {
             Square::Full(piece) => {
+                move_legal = parse_move_legality(piece.kind, from, to, self);
                 //to_square = Square::Full(piece.clone());
                 replacement_square = Square::Full(piece.clone());
                 ()}, //
             _ => ()
         }
-        self.set_square(&from, Square::Empty);
-        self.set_square(&to, replacement_square);
+        if move_legal {
+            self.set_square(&from, Square::Empty);
+            self.set_square(&to, replacement_square);
+        }
     }
 }
 
