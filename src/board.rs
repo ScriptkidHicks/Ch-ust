@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{iter::TakeWhile, slice::Iter};
+use std::{iter::{Sum, TakeWhile}, slice::Iter};
 use self::ColumnLetter::*;
 
 use crate::{pieces::*, rules::parse_move_legality};
@@ -216,6 +216,22 @@ impl SideInformation {
     pub fn add_taken_piece (&mut self, piece_kind: PieceKind) {
         self.taken_pieces.push(piece_kind);
     }
+
+    pub fn total_taken_pieces(&self) -> u32 {
+        let mut total_value = 0;
+        for piece in self.taken_pieces.iter() {
+            total_value += piece.get_value()
+        }
+        total_value
+    }
+}
+
+pub enum MoveResult {
+    MoveCompleted,
+    WrongTurn,
+    PutsKingInCheck,
+    MoveIllegal,
+    EmptySquare
 }
 
 pub struct Board {
@@ -256,28 +272,34 @@ impl Board {
         self.rows[Self::convert_row_usize(coords.number)].squares[coords.letter.eval()] = square;
     }
 
-    pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) {
+    pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) -> MoveResult {
         let from_square = self.retreive_square(&from);
         let to_square = self.retreive_square(&to);
-        let mut move_legal = false;
-        let mut taking_piece = false;
-        let mut target_piece_kind = PieceKind::Pawn;
-        let mut target_piece_color = PieceColor::Black;
-        let mut replacement_square = Square::Empty;
         match from_square {
             Square::Full(piece) => {
-                (move_legal, taking_piece, target_piece_color, target_piece_kind) = parse_move_legality(piece.kind, from, to, self);
-                //to_square = Square::Full(piece.clone());
-                replacement_square = Square::Full(piece.clone());
-                ()}, //
-            _ => ()
-        }
-        if move_legal {
-            self.set_square(&from, Square::Empty);
-            self.set_square(&to, replacement_square);
-            if (taking_piece) {
-                self.add_piece_to_kills(target_piece_kind, target_piece_color);
-            }
+                if piece.color == self.turn {
+                    let (move_legal, taking_piece, target_piece_color, target_piece_kind) = parse_move_legality(piece.kind, from, to, self);
+
+                    if move_legal {
+                        let replacement_square = from_square.clone();
+                        self.set_square(&from, Square::Empty);
+                        self.set_square(&to, replacement_square);
+                        if taking_piece {
+                            self.add_piece_to_kills(target_piece_kind, target_piece_color);
+                        }
+                        match self.turn {
+                            PieceColor::Black => self.turn = PieceColor::White,
+                            PieceColor::White => self.turn = PieceColor::Black
+                        }
+                        MoveResult::MoveCompleted
+                    } else {
+                        MoveResult::MoveIllegal
+                    }
+                } else {
+                    MoveResult::WrongTurn
+                }
+                }, //
+            Square::Empty => MoveResult::EmptySquare
         }
     }
 
@@ -302,13 +324,20 @@ impl Board {
                 }
             }
         }
-        println!(">");
+        print!("> ");
     }
 }
 
 impl fmt::Display for Board {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
+        let black_score = self.black_side_information.total_taken_pieces();
+        let white_score = self.white_side_information.total_taken_pieces();
+        let black_winning = black_score > white_score;
         self.show_taken_pieces(PieceColor::Black);
+        if black_winning {
+            println!("+{}", black_score - white_score);
+        }
+        println!("");
         let mut i = 8;
         for row in self.rows.iter() {
             print!("[{} ]", i);
@@ -320,6 +349,10 @@ impl fmt::Display for Board {
             print!("[{} ]", letter)
         }
         self.show_taken_pieces(PieceColor::White);
+        if !black_winning {
+            println!("+{}", white_score - black_score);
+        }
+        println!("");
         Ok(())
     }
 }

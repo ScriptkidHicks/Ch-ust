@@ -47,6 +47,16 @@ impl PieceKind {
             _ => 8
         }
     }
+
+    pub fn get_value(&self) -> u32 {
+        match self {
+            PieceKind::Pawn => 1,
+            PieceKind::Knight | PieceKind::Bishop => 3,
+            PieceKind::Rook => 4,
+            PieceKind::Queen => 8,
+            PieceKind::King => 0
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
