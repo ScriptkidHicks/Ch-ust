@@ -62,5 +62,6 @@ impl PieceKind {
 #[derive(Clone, Copy)]
 pub struct Piece {
     pub color: PieceColor,
-    pub kind: PieceKind
+    pub kind: PieceKind,
+    pub has_jumped: bool
 }

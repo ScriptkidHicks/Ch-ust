@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{iter::{Sum, TakeWhile}, slice::Iter};
+use std::{slice::Iter, usize};
 use self::ColumnLetter::*;
 
 use crate::{pieces::*, rules::parse_move_legality};
@@ -12,7 +12,7 @@ pub fn usize_difference(a: usize, b: usize) -> usize {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ColumnLetter {
     A,
     B,
@@ -64,10 +64,16 @@ impl fmt::Display for ColumnLetter {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum MoveDirection {
-    Verticle,
-    Lateral,
-    Diagonal,
+    Up,
+    Down,
+    Left,
+    Right,
+    UpRight,
+    UpLeft,
+    DownLeft,
+    DownRight,
     JHook,
     NoMove,
     IllegalMove
@@ -84,23 +90,42 @@ pub struct Coordinates {
 }
 
 pub fn measure_distance(from: &Coordinates, to: &Coordinates) -> SquareToSquareInformation {
-    let garnered_move_direction: MoveDirection;
+    let mut garnered_move_direction: MoveDirection = MoveDirection::NoMove;
 
     let lat_distance = usize_difference(from.letter.eval(), to.letter.eval()); 
 
     let vert_distance = usize_difference(from.number, to.number);
 
     if from.letter == to.letter {
-        if from.number == to.number {
-            garnered_move_direction = MoveDirection::NoMove;
-        } else {
-            garnered_move_direction = MoveDirection::Verticle;
+        if from.number > to.number {
+            garnered_move_direction = MoveDirection::Down;
+        } else if from.number < to.number {
+            garnered_move_direction = MoveDirection::Up;
         }
     } else if from.number == to.number {
-        garnered_move_direction = MoveDirection::Lateral;
+        if from.letter.eval() > to.letter.eval() {
+            garnered_move_direction = MoveDirection::Left;
+        } else if from.letter.eval() < to.letter.eval() {
+            garnered_move_direction = MoveDirection::Right;
+        }
     } else {
         if lat_distance == vert_distance {
-            garnered_move_direction = MoveDirection::Diagonal;
+            //we know it's diagonal, and that movement has been made, so we need to determine direction
+            if from.number > to.number {
+                // we know the move is down.
+                if from.letter.eval() > to.letter.eval() {
+                    garnered_move_direction = MoveDirection::DownLeft;
+                } else {
+                    garnered_move_direction = MoveDirection::DownRight;
+                }
+            } else {
+                // we know the move is up.
+                if from.letter.eval() > to.letter.eval() {
+                    garnered_move_direction = MoveDirection::UpLeft;
+                } else {
+                    garnered_move_direction = MoveDirection::UpRight;
+                }
+            }
         } else if (lat_distance == 1 && vert_distance == 2) || (vert_distance == 1 && lat_distance == 2) {
             garnered_move_direction = MoveDirection::JHook;
         } else {
@@ -129,6 +154,7 @@ impl fmt::Display for Square {
     }
 }
 
+#[derive(Clone)]
 pub struct Row {
     squares: [Square; 8]
 }
@@ -153,7 +179,8 @@ impl Row {
         Row {
             squares: [Square::Full(Piece{
                 color: piece_color,
-                kind: PieceKind::Pawn
+                kind: PieceKind::Pawn,
+                has_jumped: false
             }); 8]
         }
     }
@@ -163,41 +190,50 @@ impl Row {
             squares: [
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Rook
+                    kind: PieceKind::Rook,
+                    has_jumped: false
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Knight
+                    kind: PieceKind::Knight,
+                    has_jumped: false
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Bishop
+                    kind: PieceKind::Bishop,
+                    has_jumped: false
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Queen
+                    kind: PieceKind::Queen,
+                    has_jumped: false
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::King
+                    kind: PieceKind::King,
+                    has_jumped: false
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Bishop
+                    kind: PieceKind::Bishop,
+                    has_jumped: false
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Knight
+                    kind: PieceKind::Knight,
+                    has_jumped: false
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Rook
+                    kind: PieceKind::Rook,
+                    has_jumped: false
                 }),
             ]
         }
     }
 }
 
+#[derive(Clone)]
 struct SideInformation {
     taken_pieces: Vec<PieceKind>,
     can_castle_kingside: bool,
@@ -229,11 +265,11 @@ impl SideInformation {
 pub enum MoveResult {
     MoveCompleted,
     WrongTurn,
-    PutsKingInCheck,
     MoveIllegal,
     EmptySquare
 }
 
+#[derive(Clone)]
 pub struct Board {
     rows: [Row; 8],
     turn: PieceColor,
@@ -268,13 +304,59 @@ impl Board {
         &self.rows[Self::convert_row_usize(coords.number)].squares[coords.letter.eval()]
     }
 
-    fn set_square(&mut self, coords: &Coordinates, square: Square) {
+    pub fn set_square(&mut self, coords: &Coordinates, square: Square) {
         self.rows[Self::convert_row_usize(coords.number)].squares[coords.letter.eval()] = square;
+    }
+
+    pub fn is_king_in_danger(&self) -> bool {
+        let mut king_is_in_danger = false;
+
+        king_is_in_danger
+    }
+
+    pub fn twixt_hither_and_yon(&self, from: &Coordinates, to: &Coordinates, direction: MoveDirection) -> bool {
+        let mut interfering_object_present = false;
+
+        let from_letter_value = from.letter.eval();
+        let to_letter_value = to.letter.eval();
+        let from_number_value = from.number;
+        let to_number_value = to.number;
+        match direction {
+            MoveDirection::Down => {
+                for i in (from_number_value - 1)..to_number_value {
+                    match self.retreive_square(&Coordinates{ letter: from.letter, number: i}) {
+                        Square::Full(_) => {
+                            interfering_object_present = true;
+                            break;
+                        },
+                        Square::Empty => (), //Expected and fine
+                    }
+                }
+            },
+            MoveDirection::Up => {
+                for i in (from_number_value + 1)..to_number_value {
+                    match self.retreive_square(&Coordinates{ letter: from.letter, number: i}) {
+                        Square::Full(_) => {
+                            interfering_object_present = true;
+                            break;
+                        },
+                        Square::Empty => (), //Expected and fine
+                    }
+                }
+            },
+            MoveDirection::Left => (),
+            MoveDirection::DownLeft => (),
+            MoveDirection::DownRight => (),
+            MoveDirection::UpLeft => (),
+            MoveDirection::UpRight => (),
+            _ => () //we won't get here because this is only called on legal moves
+        }
+
+        interfering_object_present
     }
 
     pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) -> MoveResult {
         let from_square = self.retreive_square(&from);
-        let to_square = self.retreive_square(&to);
         match from_square {
             Square::Full(piece) => {
                 if piece.color == self.turn {
