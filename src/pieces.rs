@@ -1,4 +1,5 @@
 use core::fmt;
+use std::fmt::write;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum PieceColor {
@@ -62,6 +63,12 @@ impl PieceKind {
 #[derive(Clone, Copy)]
 pub struct Piece {
     pub color: PieceColor,
-    pub kind: PieceKind,
-    pub has_jumped: bool
+    pub kind: PieceKind
+}
+
+impl fmt::Display for Piece {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        print!("{}{}", self.color, self.kind);
+        Ok(())
+    }
 }

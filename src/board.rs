@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{slice::Iter, usize};
+use std::{fmt::{write, Error}, slice::Iter, usize};
 use self::ColumnLetter::*;
 
 use crate::{pieces::*, rules::parse_move_legality};
@@ -43,6 +43,20 @@ impl ColumnLetter {
     LETTERS.iter()
    } 
 
+   pub fn construct_from_usize(size: usize) -> Result<ColumnLetter, &'static str> {
+    match size {
+        0 => Ok(ColumnLetter::A),
+        1 => Ok(ColumnLetter::B),
+        2 => Ok(ColumnLetter::C),
+        3 => Ok(ColumnLetter::D),
+        4 => Ok(ColumnLetter::E),
+        5 => Ok(ColumnLetter::F),
+        6 => Ok(ColumnLetter::G),
+        7 => Ok(ColumnLetter::H),
+        _ => Err("Not a valid conversion usize")
+    }
+   }
+
    pub fn convert_to(letter: char) -> Result<ColumnLetter, &'static str> {
     match letter {
         'a' => Ok(ColumnLetter::A),
@@ -64,7 +78,7 @@ impl fmt::Display for ColumnLetter {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum MoveDirection {
     Up,
     Down,
@@ -77,6 +91,24 @@ pub enum MoveDirection {
     JHook,
     NoMove,
     IllegalMove
+}
+
+impl fmt::Display for MoveDirection {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Down => write!(f, "Down"),
+            Self::Up => write!(f, "Up"),
+            Self::Right => write!(f, "Right"),
+            Self::Left => write!(f, "Left"),
+            Self::JHook => write!(f, "JHook"),
+            Self::DownLeft => write!(f, "Down Left"),
+            Self::DownRight => write!(f, "Down Right"),
+            Self::UpLeft => write!(f, "Up Left"),
+            Self::UpRight => write!(f, "Up Right"),
+            Self::IllegalMove => write!(f, "Illegal Move"),
+            Self::NoMove => write!(f, "No Move")
+        }
+    }
 }
 
 pub struct SquareToSquareInformation {
@@ -179,8 +211,7 @@ impl Row {
         Row {
             squares: [Square::Full(Piece{
                 color: piece_color,
-                kind: PieceKind::Pawn,
-                has_jumped: false
+                kind: PieceKind::Pawn
             }); 8]
         }
     }
@@ -190,43 +221,35 @@ impl Row {
             squares: [
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Rook,
-                    has_jumped: false
+                    kind: PieceKind::Rook
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Knight,
-                    has_jumped: false
+                    kind: PieceKind::Knight
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Bishop,
-                    has_jumped: false
+                    kind: PieceKind::Bishop
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Queen,
-                    has_jumped: false
+                    kind: PieceKind::Queen
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::King,
-                    has_jumped: false
+                    kind: PieceKind::King
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Bishop,
-                    has_jumped: false
+                    kind: PieceKind::Bishop
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Knight,
-                    has_jumped: false
+                    kind: PieceKind::Knight
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Rook,
-                    has_jumped: false
+                    kind: PieceKind::Rook
                 }),
             ]
         }
@@ -315,6 +338,7 @@ impl Board {
     }
 
     pub fn twixt_hither_and_yon(&self, from: &Coordinates, to: &Coordinates, direction: MoveDirection) -> bool {
+        println!("entering twixt hither and yon with {}", direction);
         let mut interfering_object_present = false;
 
         let from_letter_value = from.letter.eval();
@@ -323,9 +347,13 @@ impl Board {
         let to_number_value = to.number;
         match direction {
             MoveDirection::Down => {
-                for i in (from_number_value - 1)..to_number_value {
+                println!("moving down");
+                println!("going from {} to {}", (to_number_value + 1), from_number_value);
+                for i in (to_number_value + 1)..(from_number_value) {
+                    println!("square: {}{}", from.letter, i);
                     match self.retreive_square(&Coordinates{ letter: from.letter, number: i}) {
-                        Square::Full(_) => {
+                        Square::Full(piece) => {
+                            println!("full with: {}", piece);
                             interfering_object_present = true;
                             break;
                         },
@@ -344,18 +372,62 @@ impl Board {
                     }
                 }
             },
-            MoveDirection::Left => (),
+            MoveDirection::Left => {
+                println!("moving left");
+                for i in (to_letter_value + 1)..from_letter_value {
+                    match ColumnLetter::construct_from_usize(i) {
+                        Ok(found_letter) => {
+                            match self.retreive_square(&Coordinates {letter: found_letter, number: from_number_value}){
+                                Square::Full(piece) => {
+                                    println!("oops! this contains {} on square {}{}", piece, found_letter, from_number_value);
+                                    interfering_object_present = true;
+                                    break;  
+                                },
+                                Square::Empty => (),
+                            }
+                        },
+                        Err(result_string) => {
+                            panic!("{}", result_string);
+                        }
+                    }
+                }
+            },
+            MoveDirection::Right => {
+                println!("moving right");
+                for i in (from_letter_value + 1)..to_letter_value {
+                    match ColumnLetter::construct_from_usize(i) {
+                        Ok(found_letter) => {
+                            match self.retreive_square(&Coordinates {letter: found_letter, number: from_number_value}){
+                                Square::Full(piece) => {
+                                    println!("oops! this contains {} on square {}{}", piece, found_letter, from_number_value);
+                                    interfering_object_present = true;
+                                    break;  
+                                },
+                                Square::Empty => (),
+                            }
+                        },
+                        Err(result_string) => {
+                            panic!("{}", result_string);
+                        }
+                    }
+                }
+            },
             MoveDirection::DownLeft => (),
             MoveDirection::DownRight => (),
-            MoveDirection::UpLeft => (),
-            MoveDirection::UpRight => (),
-            _ => () //we won't get here because this is only called on legal moves
+            MoveDirection::UpLeft => {
+
+            },
+            MoveDirection::UpRight => {
+
+            },
+            _ => () //if we are here, the move is either a JHook, which is allowed to jump, or illegal,
         }
 
         interfering_object_present
     }
 
     pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) -> MoveResult {
+        println!("entering move piece from {}{}", from.letter, from.number);
         let from_square = self.retreive_square(&from);
         match from_square {
             Square::Full(piece) => {
