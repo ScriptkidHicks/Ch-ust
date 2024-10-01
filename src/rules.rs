@@ -23,7 +23,7 @@ pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates
     let mut taking_piece = false;
     let mut color_legal = false;
 
-    let no_interference = !chess_board.twixt_hither_and_yon(from, to, move_information.move_direction);
+    let no_interference = chess_board.twixt_hither_and_yon(from, to, move_information.move_direction);
 
     if no_interference {
         match from_square {
@@ -47,14 +47,16 @@ pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates
                         PieceKind::Pawn => {
                             if taking_piece {
                                 match from_square_piece.color {
-                                    PieceColor::Black => if move_information.distance == 1 && move_information.move_direction == MoveDirection::DownLeft || move_information.move_direction == MoveDirection::DownRight {successful = true},
-                                    PieceColor::White => if move_information.distance == 1 && move_information.move_direction == MoveDirection::UpLeft || move_information.move_direction == MoveDirection::UpRight {successful = true},
+                                    PieceColor::Black => if move_information.distance == 2 && move_information.move_direction == MoveDirection::DownLeft || move_information.move_direction == MoveDirection::DownRight {successful = true;},
+                                    PieceColor::White => if move_information.distance == 2 && move_information.move_direction == MoveDirection::UpLeft || move_information.move_direction == MoveDirection::UpRight {
+                                        successful = true;
+                                    },
                                 }
                             } else {
                                 if move_information.distance == 1 {
                                     match from_square_piece.color {
-                                        PieceColor::Black => if move_information.move_direction == MoveDirection::Down {successful = true},
-                                        PieceColor::White => if move_information.move_direction == MoveDirection::Up {successful = true},
+                                        PieceColor::Black => if move_information.move_direction == MoveDirection::Down {successful = true;},
+                                        PieceColor::White => if move_information.move_direction == MoveDirection::Up {successful = true;},
                                     }
                                 } else if move_information.distance == 2 {
                                     match from_square_piece.color {
@@ -92,6 +94,15 @@ pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates
                     PieceKind::King => {
                         if move_information.distance == 1 {
                             successful = true;
+                        } else if move_information.distance == 2 {
+                            match from_square_piece.color {
+                                PieceColor::Black => {
+
+                                },
+                                PieceColor::White => {
+                                    
+                                }
+                            }
                         }
                     },
                     PieceKind::Queen => {

@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{fmt::{write, Error}, slice::Iter, usize};
+use std::{fmt::{write, Error}, path, slice::Iter, usize};
 use self::ColumnLetter::*;
 
 use crate::{pieces::*, rules::parse_move_legality};
@@ -43,17 +43,17 @@ impl ColumnLetter {
     LETTERS.iter()
    } 
 
-   pub fn construct_from_usize(size: usize) -> Result<ColumnLetter, &'static str> {
+   pub fn construct_from_usize(size: usize) -> ColumnLetter {
     match size {
-        0 => Ok(ColumnLetter::A),
-        1 => Ok(ColumnLetter::B),
-        2 => Ok(ColumnLetter::C),
-        3 => Ok(ColumnLetter::D),
-        4 => Ok(ColumnLetter::E),
-        5 => Ok(ColumnLetter::F),
-        6 => Ok(ColumnLetter::G),
-        7 => Ok(ColumnLetter::H),
-        _ => Err("Not a valid conversion usize")
+        0 => ColumnLetter::A,
+        1 => ColumnLetter::B,
+        2 => ColumnLetter::C,
+        3 => ColumnLetter::D,
+        4 => ColumnLetter::E,
+        5 => ColumnLetter::F,
+        6 => ColumnLetter::G,
+        7 => ColumnLetter::H,
+        _ => ColumnLetter::H
     }
    }
 
@@ -338,8 +338,7 @@ impl Board {
     }
 
     pub fn twixt_hither_and_yon(&self, from: &Coordinates, to: &Coordinates, direction: MoveDirection) -> bool {
-        println!("entering twixt hither and yon with {}", direction);
-        let mut interfering_object_present = false;
+        let mut path_clear = true;
 
         let from_letter_value = from.letter.eval();
         let to_letter_value = to.letter.eval();
@@ -347,14 +346,10 @@ impl Board {
         let to_number_value = to.number;
         match direction {
             MoveDirection::Down => {
-                println!("moving down");
-                println!("going from {} to {}", (to_number_value + 1), from_number_value);
                 for i in (to_number_value + 1)..(from_number_value) {
-                    println!("square: {}{}", from.letter, i);
                     match self.retreive_square(&Coordinates{ letter: from.letter, number: i}) {
                         Square::Full(piece) => {
-                            println!("full with: {}", piece);
-                            interfering_object_present = true;
+                            path_clear = false;
                             break;
                         },
                         Square::Empty => (), //Expected and fine
@@ -365,7 +360,7 @@ impl Board {
                 for i in (from_number_value + 1)..to_number_value {
                     match self.retreive_square(&Coordinates{ letter: from.letter, number: i}) {
                         Square::Full(_) => {
-                            interfering_object_present = true;
+                            path_clear = false;
                             break;
                         },
                         Square::Empty => (), //Expected and fine
@@ -373,61 +368,91 @@ impl Board {
                 }
             },
             MoveDirection::Left => {
-                println!("moving left");
                 for i in (to_letter_value + 1)..from_letter_value {
-                    match ColumnLetter::construct_from_usize(i) {
-                        Ok(found_letter) => {
-                            match self.retreive_square(&Coordinates {letter: found_letter, number: from_number_value}){
-                                Square::Full(piece) => {
-                                    println!("oops! this contains {} on square {}{}", piece, found_letter, from_number_value);
-                                    interfering_object_present = true;
-                                    break;  
-                                },
-                                Square::Empty => (),
-                            }
+                    match self.retreive_square(&Coordinates {letter: ColumnLetter::construct_from_usize(i), number: from_number_value}){
+                        Square::Full(piece) => {
+                            path_clear = false;
+                            break;  
                         },
-                        Err(result_string) => {
-                            panic!("{}", result_string);
-                        }
+                        Square::Empty => (),
                     }
                 }
             },
             MoveDirection::Right => {
-                println!("moving right");
                 for i in (from_letter_value + 1)..to_letter_value {
-                    match ColumnLetter::construct_from_usize(i) {
-                        Ok(found_letter) => {
-                            match self.retreive_square(&Coordinates {letter: found_letter, number: from_number_value}){
-                                Square::Full(piece) => {
-                                    println!("oops! this contains {} on square {}{}", piece, found_letter, from_number_value);
-                                    interfering_object_present = true;
-                                    break;  
-                                },
-                                Square::Empty => (),
-                            }
+                    match self.retreive_square(&Coordinates {letter: ColumnLetter::construct_from_usize(i), number: from_number_value}){
+                        Square::Full(piece) => {
+                            path_clear = false;
+                            break;  
                         },
-                        Err(result_string) => {
-                            panic!("{}", result_string);
-                        }
+                        Square::Empty => (),
                     }
                 }
             },
-            MoveDirection::DownLeft => (),
-            MoveDirection::DownRight => (),
+            MoveDirection::DownLeft => {
+                let distance = from_letter_value - to_letter_value;
+                for i in 1..distance {
+                    match self.retreive_square(&Coordinates {
+                        letter: ColumnLetter::construct_from_usize(from_letter_value - i),
+                        number: from_number_value - i
+                    }) {
+                        Square::Full(piece) => {
+                            path_clear = false;
+                            break;
+                        },
+                        Square::Empty => ()
+                    }
+                }
+            },
+            MoveDirection::DownRight => {
+                let distance = to_letter_value - from_letter_value;
+                for i in 1..distance {
+                    match self.retreive_square(&Coordinates{letter: ColumnLetter::construct_from_usize(from_letter_value + i), number: from_number_value - i}) {
+                        Square::Full(piece) => {
+                            path_clear = false;
+                            break;
+                        },
+                        Square::Empty => ()
+                    }
+                }
+                
+            },
             MoveDirection::UpLeft => {
-
+                let distance = to_number_value - from_number_value;
+                for i in 1..distance {
+                    match self.retreive_square(&Coordinates{
+                        letter: ColumnLetter::construct_from_usize(from_letter_value - i),
+                        number: from_number_value + i
+                    }) {
+                        Square::Full(piece) => {
+                            path_clear = false;
+                            break;
+                        },
+                        Square::Empty => ()
+                    }
+                }
             },
             MoveDirection::UpRight => {
+                let distance = to_letter_value - from_letter_value;
+                for i in 1..distance {
+                    // we can rely on the distance being equal, otherwise the move is illegal.
+                    match self.retreive_square(&Coordinates {letter: ColumnLetter::construct_from_usize(from_letter_value + i), number: from_number_value + i}) {
+                        Square::Full(piece) => {
+                            path_clear = false;
+                            break;
+                        },
+                        Square::Empty => {}
+                    }
 
+                }
             },
             _ => () //if we are here, the move is either a JHook, which is allowed to jump, or illegal,
         }
 
-        interfering_object_present
+        path_clear
     }
 
     pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) -> MoveResult {
-        println!("entering move piece from {}{}", from.letter, from.number);
         let from_square = self.retreive_square(&from);
         match from_square {
             Square::Full(piece) => {
@@ -486,6 +511,7 @@ impl fmt::Display for Board {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
         let black_score = self.black_side_information.total_taken_pieces();
         let white_score = self.white_side_information.total_taken_pieces();
+        let score_equal = black_score == white_score;
         let black_winning = black_score > white_score;
         self.show_taken_pieces(PieceColor::Black);
         if black_winning {
@@ -503,7 +529,7 @@ impl fmt::Display for Board {
             print!("[{} ]", letter)
         }
         self.show_taken_pieces(PieceColor::White);
-        if !black_winning {
+        if !black_winning && !score_equal{
             println!("+{}", white_score - black_score);
         }
         println!("");
