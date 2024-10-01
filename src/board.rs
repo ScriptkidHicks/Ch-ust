@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{fmt::{write, Error}, path, slice::Iter, usize};
+use std::{fmt::{write, Error}, ops::Range, path, slice::Iter, usize};
 use self::ColumnLetter::*;
 
 use crate::{pieces::*, rules::parse_move_legality};
@@ -114,11 +114,19 @@ impl fmt::Display for MoveDirection {
 pub struct SquareToSquareInformation {
     pub move_direction: MoveDirection,
     pub distance: usize
-
 }
+
+#[derive(Clone, Copy)]
 pub struct Coordinates {
     pub letter: ColumnLetter,
     pub number: usize
+}
+
+impl fmt::Display for Coordinates {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        print!("{}{}", self.letter, self.number);
+        Ok(())
+    }
 }
 
 pub fn measure_distance(from: &Coordinates, to: &Coordinates) -> SquareToSquareInformation {
@@ -260,15 +268,20 @@ impl Row {
 struct SideInformation {
     taken_pieces: Vec<PieceKind>,
     can_castle_kingside: bool,
-    can_castle_queenside: bool
+    can_castle_queenside: bool,
+    current_king_square: Coordinates
 }
 
 impl SideInformation {
-    pub fn default () -> Self {
+    pub fn default (king_color: PieceColor) -> Self {
         SideInformation {
             taken_pieces: Vec::new(),
             can_castle_kingside: true,
-            can_castle_queenside: false
+            can_castle_queenside: false,
+            current_king_square: Coordinates {letter: ColumnLetter::E, number: match king_color {
+                PieceColor::Black => 8,
+                PieceColor::White => 1
+            }}
         }
     }
 
@@ -282,6 +295,10 @@ impl SideInformation {
             total_value += piece.get_value()
         }
         total_value
+    }
+
+    pub fn update_king_location (&mut self, letter: ColumnLetter, number: usize) {
+        self.current_king_square = Coordinates {letter: letter, number: number};
     }
 }
 
@@ -314,8 +331,8 @@ impl Board {
                 Row::default_back_row(PieceColor::White)
             ],
             turn: PieceColor::White,
-            white_side_information: SideInformation::default(),
-            black_side_information: SideInformation::default()
+            white_side_information: SideInformation::default(PieceColor::White),
+            black_side_information: SideInformation::default(PieceColor::Black)
         }
     }
     
@@ -331,10 +348,56 @@ impl Board {
         self.rows[Self::convert_row_usize(coords.number)].squares[coords.letter.eval()] = square;
     }
 
-    pub fn is_king_in_danger(&self) -> bool {
-        let mut king_is_in_danger = false;
+    pub fn is_king_in_danger(&self, king_color: PieceColor) -> bool {
 
-        king_is_in_danger
+        let target_king_coordinates = match king_color {
+            PieceColor::Black => self.black_side_information.current_king_square,
+            PieceColor::White => self.white_side_information.current_king_square
+        };
+
+        for letter in ColumnLetter::iterator() {
+            for number in 1..9 {
+                let from_coords = Coordinates{letter: *letter, number: number};
+                let gotten_square = self.retreive_square(&from_coords);
+                match gotten_square {
+                    &Square::Full(piece ) => {
+                        // we only care about the ability of other pieces to tkae our king;
+                        if piece.color != king_color {
+                            //only pieces of the opposite color can threaten the king
+                            if self.square_threatens_square(&from_coords, &target_king_coordinates) {
+                                // oops, we found a square that threatens the king. Can't allow that!
+                                return true;
+                            }
+                        }
+                    },
+                    &Square::Empty => ()
+                }
+            }
+        }
+
+        false
+    }
+
+    pub fn square_threatens_square(&self, from: &Coordinates, to: &Coordinates) -> bool {
+        match self.retreive_square(from) {
+            Square::Full(piece) => {
+                let distance_information = measure_distance(from, to);
+                let (legal, _, _, _): (bool, bool, PieceColor, PieceKind) = parse_move_legality(piece.kind, from, to, self);
+                if legal {
+                    match piece.kind {
+                        PieceKind::Pawn => {
+                            //pawns are a special case because they can move up or down, but can only take on the diagonal.
+                            distance_information.distance == 2 && (distance_information.move_direction != MoveDirection::Up && distance_information.move_direction != MoveDirection::Down)
+                        },
+                        _ => true
+                    }
+                } else {
+                    false
+                }
+
+            },
+            Square::Empty => false //can't threaten another square with an empty square.
+        }
     }
 
     pub fn twixt_hither_and_yon(&self, from: &Coordinates, to: &Coordinates, direction: MoveDirection) -> bool {
@@ -460,6 +523,15 @@ impl Board {
                     let (move_legal, taking_piece, target_piece_color, target_piece_kind) = parse_move_legality(piece.kind, from, to, self);
 
                     if move_legal {
+                        // if we're moving the king we need to update his coords
+                        if piece.kind == PieceKind::King {
+                            match piece.color {
+                                PieceColor::Black => {
+                                    self.black_side_information.update_king_location(to.letter, to.number);
+                                },
+                                PieceColor::White => {}
+                            }
+                        }
                         let replacement_square = from_square.clone();
                         self.set_square(&from, Square::Empty);
                         self.set_square(&to, replacement_square);
@@ -470,6 +542,7 @@ impl Board {
                             PieceColor::Black => self.turn = PieceColor::White,
                             PieceColor::White => self.turn = PieceColor::Black
                         }
+                        //now we have to update the coordinates of the king if necessary
                         MoveResult::MoveCompleted
                     } else {
                         MoveResult::MoveIllegal

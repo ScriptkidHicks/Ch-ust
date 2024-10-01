@@ -5,15 +5,21 @@ pub fn would_king_be_in_danger(board: Board, from: &Coordinates, to: &Coordinate
         let mut copied_board = board.clone();
 
         let from_square = board.retreive_square(&from);
+        match from_square {
+            &Square::Full(piece) => {
+                copied_board.set_square(&from, Square::Empty);
+                copied_board.set_square(&to, from_square.clone());
 
-        copied_board.set_square(&from, Square::Empty);
-        copied_board.set_square(&to, from_square.clone());
+                copied_board.is_king_in_danger(piece.color)
+            },
+            &Square::Empty => panic!("You tried to move out of an empty square in would_king_be_in_danger!")
+        }
 
-        copied_board.is_king_in_danger()
+        
     }
 
 pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates, chess_board: &Board) -> (bool, bool, PieceColor, PieceKind) {
-    let move_information = measure_distance(from, to);
+    let move_information: SquareToSquareInformation = measure_distance(from, to);
     let mut successful = false;
     let from_square = chess_board.retreive_square(&from);
     let to_square = chess_board.retreive_square(&to);
