@@ -116,7 +116,7 @@ pub struct SquareToSquareInformation {
     pub distance: usize
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Coordinates {
     pub letter: ColumnLetter,
     pub number: usize
@@ -297,8 +297,12 @@ impl SideInformation {
         total_value
     }
 
-    pub fn update_king_location (&mut self, letter: ColumnLetter, number: usize) {
-        self.current_king_square = Coordinates {letter: letter, number: number};
+    pub fn update_king_location (&mut self, letter: &ColumnLetter, number: &usize) {
+        self.current_king_square = Coordinates {letter: *letter, number: *number};
+    }
+
+    pub fn king_can_castle (&self, is_kingside_query: bool) -> bool {
+        if is_kingside_query { self.can_castle_kingside } else { self.can_castle_queenside }
     }
 }
 
@@ -346,6 +350,13 @@ impl Board {
 
     pub fn set_square(&mut self, coords: &Coordinates, square: Square) {
         self.rows[Self::convert_row_usize(coords.number)].squares[coords.letter.eval()] = square;
+    }
+
+    pub fn king_can_castle (&self, king_color: PieceColor, is_kingside_query: bool) -> bool {
+        match king_color {
+            PieceColor::Black => self.black_side_information.king_can_castle(is_kingside_query),
+            PieceColor::White => self.white_side_information.king_can_castle(is_kingside_query)
+        }
     }
 
     pub fn is_king_in_danger(&self, king_color: PieceColor) -> bool {
@@ -515,22 +526,28 @@ impl Board {
         path_clear
     }
 
+    fn update_king_location(&mut self, coords: Coordinates, king_color: PieceColor) {
+        match king_color {
+            PieceColor::Black => self.black_side_information.update_king_location(&coords.letter, &coords.number),
+            PieceColor::White => self.white_side_information.update_king_location(&coords.letter, &coords.number),
+        }
+    }
+
     pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) -> MoveResult {
         let from_square = self.retreive_square(&from);
+        let mut opt_king_location: Option<Coordinates> = None;
+        let mut king_color: PieceColor = PieceColor::Black;
+        let move_result: MoveResult;
         match from_square {
             Square::Full(piece) => {
                 if piece.color == self.turn {
                     let (move_legal, taking_piece, target_piece_color, target_piece_kind) = parse_move_legality(piece.kind, from, to, self);
 
                     if move_legal {
-                        // if we're moving the king we need to update his coords
+                           // if we're moving the king we need to update his coords
                         if piece.kind == PieceKind::King {
-                            match piece.color {
-                                PieceColor::Black => {
-                                    self.black_side_information.update_king_location(to.letter, to.number);
-                                },
-                                PieceColor::White => {}
-                            }
+                                king_color = piece.color;
+                                opt_king_location = Some(Coordinates{letter: to.letter, number: to.number});
                         }
                         let replacement_square = from_square.clone();
                         self.set_square(&from, Square::Empty);
@@ -543,16 +560,25 @@ impl Board {
                             PieceColor::White => self.turn = PieceColor::Black
                         }
                         //now we have to update the coordinates of the king if necessary
-                        MoveResult::MoveCompleted
+                        move_result = MoveResult::MoveCompleted
                     } else {
-                        MoveResult::MoveIllegal
+                        move_result = MoveResult::MoveIllegal
                     }
                 } else {
-                    MoveResult::WrongTurn
+                    move_result = MoveResult::WrongTurn
                 }
                 }, //
-            Square::Empty => MoveResult::EmptySquare
+            Square::Empty => move_result = MoveResult::EmptySquare
         }
+
+        match opt_king_location {
+            Some(location) => {
+                self.update_king_location(location, king_color);
+            },
+            None => ()
+        }
+
+        move_result
     }
 
     pub fn add_piece_to_kills(&mut self, piece_kind: PieceKind, piece_color: PieceColor) {

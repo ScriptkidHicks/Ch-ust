@@ -2,21 +2,19 @@ use crate::board::*;
 use crate::pieces::*;
 
 pub fn would_king_be_in_danger(board: Board, from: &Coordinates, to: &Coordinates) -> bool {
-        let mut copied_board = board.clone();
+    let mut copied_board = board.clone();
 
-        let from_square = board.retreive_square(&from);
-        match from_square {
-            &Square::Full(piece) => {
-                copied_board.set_square(&from, Square::Empty);
-                copied_board.set_square(&to, from_square.clone());
+    let from_square = board.retreive_square(&from);
+    match from_square {
+        &Square::Full(piece) => {
+            copied_board.set_square(&from, Square::Empty);
+            copied_board.set_square(&to, from_square.clone());
 
-                copied_board.is_king_in_danger(piece.color)
-            },
-            &Square::Empty => panic!("You tried to move out of an empty square in would_king_be_in_danger!")
-        }
-
-        
-    }
+            copied_board.is_king_in_danger(piece.color)
+        },
+        &Square::Empty => panic!("You tried to move out of an empty square in would_king_be_in_danger!")
+    }        
+}
 
 pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates, chess_board: &Board) -> (bool, bool, PieceColor, PieceKind) {
     let move_information: SquareToSquareInformation = measure_distance(from, to);
@@ -101,13 +99,18 @@ pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates
                         if move_information.distance == 1 {
                             successful = true;
                         } else if move_information.distance == 2 {
-                            match from_square_piece.color {
-                                PieceColor::Black => {
-
+                            match move_information.move_direction {
+                                MoveDirection::Left => {
+                                    if chess_board.king_can_castle(PieceColor::Black, false) {
+                                        successful = true;
+                                    }
                                 },
-                                PieceColor::White => {
-                                    
-                                }
+                                MoveDirection::Right => {
+                                    if chess_board.king_can_castle(PieceColor::Black, true) {
+                                        successful = true;
+                                    }
+                                },
+                                _ => ()
                             }
                         }
                     },
