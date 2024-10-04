@@ -376,6 +376,10 @@ impl Board {
     }
 
     pub fn king_can_castle (&self, king_color: PieceColor, is_kingside_query: bool) -> bool {
+        if self.is_king_in_danger(king_color) {
+            //now now, no castling out of check.
+            return false;
+        }
         match king_color {
             PieceColor::Black => self.black_side_information.king_can_castle(is_kingside_query) && self.is_castling_safe(king_color, is_kingside_query),
             PieceColor::White => self.white_side_information.king_can_castle(is_kingside_query) && self.is_castling_safe(king_color, is_kingside_query)

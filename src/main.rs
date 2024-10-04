@@ -1,5 +1,4 @@
 use board::{Board, Coordinates};
-use interface::parse_square;
 
 mod board;
 mod pieces;
