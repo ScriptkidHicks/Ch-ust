@@ -43,7 +43,7 @@ impl ColumnLetter {
     LETTERS.iter()
    } 
 
-   pub fn construct_from_usize(size: usize) -> ColumnLetter {
+   pub fn construct_letter_from_usize(size: usize) -> ColumnLetter {
     match size {
         0 => ColumnLetter::A,
         1 => ColumnLetter::B,
@@ -126,6 +126,22 @@ impl fmt::Display for Coordinates {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         print!("{}{}", self.letter, self.number);
         Ok(())
+    }
+}
+
+impl Coordinates {
+    pub fn increment_column(original_coordinates: Coordinates) -> Coordinates {
+        Coordinates {
+            letter: ColumnLetter::construct_letter_from_usize(original_coordinates.letter.eval() + 1),
+            number: original_coordinates.number
+        }
+    }
+
+    pub fn decrement_column(original_coordinates: Coordinates) -> Coordinates {
+        Coordinates {
+            letter: ColumnLetter::construct_letter_from_usize(original_coordinates.letter.eval() - 1),
+            number: original_coordinates.number
+        }
     }
 }
 
@@ -299,10 +315,17 @@ impl SideInformation {
 
     pub fn update_king_location (&mut self, letter: &ColumnLetter, number: &usize) {
         self.current_king_square = Coordinates {letter: *letter, number: *number};
+        //moving your king at all negats your ability to castle on both sides.
+        self.can_castle_kingside = false;
+        self.can_castle_queenside = false;
     }
 
     pub fn king_can_castle (&self, is_kingside_query: bool) -> bool {
         if is_kingside_query { self.can_castle_kingside } else { self.can_castle_queenside }
+    }
+
+    pub fn remove_castling_rights(&mut self, is_kingside: bool) {
+        if is_kingside {self.can_castle_kingside = false;} else {self.can_castle_queenside = false;} 
     }
 }
 
@@ -354,8 +377,61 @@ impl Board {
 
     pub fn king_can_castle (&self, king_color: PieceColor, is_kingside_query: bool) -> bool {
         match king_color {
-            PieceColor::Black => self.black_side_information.king_can_castle(is_kingside_query),
-            PieceColor::White => self.white_side_information.king_can_castle(is_kingside_query)
+            PieceColor::Black => self.black_side_information.king_can_castle(is_kingside_query) && self.is_castling_safe(king_color, is_kingside_query),
+            PieceColor::White => self.white_side_information.king_can_castle(is_kingside_query) && self.is_castling_safe(king_color, is_kingside_query)
+        }
+    }
+
+    fn is_castling_safe(&self, king_color: PieceColor, is_kingside_query: bool) -> bool {
+        //logical shorting means that we can safely blind check.
+        let mut copied_board = self.clone();
+
+        let row_number: usize = match king_color {
+            PieceColor::Black => 8,
+            PieceColor::White => 1
+        };
+
+        let empty_square = Square::Empty;
+        let moved_square = copied_board.retreive_square(&Coordinates{letter: ColumnLetter::E, number: row_number}).clone();
+
+        if is_kingside_query {
+            copied_board.set_square(&Coordinates{letter: ColumnLetter::E, number: row_number}, empty_square);
+            copied_board.set_square(&Coordinates{letter: ColumnLetter::F, number: row_number}, moved_square);
+            if copied_board.is_king_in_danger(king_color) {
+                //keep your functions flat and return early.
+                return false;
+            }
+            //ok, so we know that it's safe to keep going. Lets check the next state.
+            copied_board.set_square(&Coordinates{letter: ColumnLetter::F, number: row_number}, empty_square);
+            copied_board.set_square(&Coordinates{letter: ColumnLetter::G, number: row_number}, moved_square);
+            if copied_board.is_king_in_danger(king_color) {
+                return false;
+            }
+            // we don't need to check hopping the rook over the king, because there isn't a way to threaten the king by moving that rook.
+        } else {
+            copied_board.set_square(&Coordinates{letter: ColumnLetter::E, number: row_number}, empty_square);
+            copied_board.set_square(&Coordinates{letter: ColumnLetter::D, number: row_number}, moved_square);
+            if copied_board.is_king_in_danger(king_color) {
+                //keep your functions flat and return early.
+                return false;
+            }
+            //ok, so we know that it's safe to keep going. Lets check the next state.
+            copied_board.set_square(&Coordinates{letter: ColumnLetter::D, number: row_number}, empty_square);
+            copied_board.set_square(&Coordinates{letter: ColumnLetter::C, number: row_number}, moved_square);
+            if copied_board.is_king_in_danger(king_color) {
+                return false;
+            }
+        }
+
+
+        //if we made it here, then it's safe to return true.
+        true
+    }
+
+    pub fn remove_castling_rights(&mut self, side_color: PieceColor, is_kingside: bool) {
+        match side_color {
+            PieceColor::Black => self.black_side_information.remove_castling_rights(is_kingside),
+            PieceColor::White => self.white_side_information.remove_castling_rights(is_kingside),
         }
     }
 
@@ -393,7 +469,7 @@ impl Board {
         match self.retreive_square(from) {
             Square::Full(piece) => {
                 let distance_information = measure_distance(from, to);
-                let (legal, _, _, _): (bool, bool, PieceColor, PieceKind) = parse_move_legality(piece.kind, from, to, self);
+                let (legal, _, _, _, _, _) = parse_move_legality(piece.kind, from, to, self);
                 if legal {
                     match piece.kind {
                         PieceKind::Pawn => {
@@ -443,7 +519,7 @@ impl Board {
             },
             MoveDirection::Left => {
                 for i in (to_letter_value + 1)..from_letter_value {
-                    match self.retreive_square(&Coordinates {letter: ColumnLetter::construct_from_usize(i), number: from_number_value}){
+                    match self.retreive_square(&Coordinates {letter: ColumnLetter::construct_letter_from_usize(i), number: from_number_value}){
                         Square::Full(piece) => {
                             path_clear = false;
                             break;  
@@ -454,7 +530,7 @@ impl Board {
             },
             MoveDirection::Right => {
                 for i in (from_letter_value + 1)..to_letter_value {
-                    match self.retreive_square(&Coordinates {letter: ColumnLetter::construct_from_usize(i), number: from_number_value}){
+                    match self.retreive_square(&Coordinates {letter: ColumnLetter::construct_letter_from_usize(i), number: from_number_value}){
                         Square::Full(piece) => {
                             path_clear = false;
                             break;  
@@ -467,7 +543,7 @@ impl Board {
                 let distance = from_letter_value - to_letter_value;
                 for i in 1..distance {
                     match self.retreive_square(&Coordinates {
-                        letter: ColumnLetter::construct_from_usize(from_letter_value - i),
+                        letter: ColumnLetter::construct_letter_from_usize(from_letter_value - i),
                         number: from_number_value - i
                     }) {
                         Square::Full(piece) => {
@@ -481,7 +557,7 @@ impl Board {
             MoveDirection::DownRight => {
                 let distance = to_letter_value - from_letter_value;
                 for i in 1..distance {
-                    match self.retreive_square(&Coordinates{letter: ColumnLetter::construct_from_usize(from_letter_value + i), number: from_number_value - i}) {
+                    match self.retreive_square(&Coordinates{letter: ColumnLetter::construct_letter_from_usize(from_letter_value + i), number: from_number_value - i}) {
                         Square::Full(piece) => {
                             path_clear = false;
                             break;
@@ -495,7 +571,7 @@ impl Board {
                 let distance = to_number_value - from_number_value;
                 for i in 1..distance {
                     match self.retreive_square(&Coordinates{
-                        letter: ColumnLetter::construct_from_usize(from_letter_value - i),
+                        letter: ColumnLetter::construct_letter_from_usize(from_letter_value - i),
                         number: from_number_value + i
                     }) {
                         Square::Full(piece) => {
@@ -510,7 +586,7 @@ impl Board {
                 let distance = to_letter_value - from_letter_value;
                 for i in 1..distance {
                     // we can rely on the distance being equal, otherwise the move is illegal.
-                    match self.retreive_square(&Coordinates {letter: ColumnLetter::construct_from_usize(from_letter_value + i), number: from_number_value + i}) {
+                    match self.retreive_square(&Coordinates {letter: ColumnLetter::construct_letter_from_usize(from_letter_value + i), number: from_number_value + i}) {
                         Square::Full(piece) => {
                             path_clear = false;
                             break;
@@ -533,23 +609,69 @@ impl Board {
         }
     }
 
+    fn castle(&mut self, king_color: PieceColor, is_kingside: bool) {
+        let row_number = match king_color {
+            PieceColor::White => 1, 
+            PieceColor::Black => 8
+        };
+        let pulled_king = self.retreive_square(&Coordinates{letter:E, number: row_number}).clone();
+        let pulled_rook = match is_kingside { 
+            true => self.retreive_square(&Coordinates{letter: ColumnLetter::H, number: row_number}).clone(), 
+            false => self.retreive_square(&Coordinates{letter: ColumnLetter::A, number: row_number}).clone()
+        };
+        let empty_square = Square::Empty;
+
+        match is_kingside {
+            true => {
+                self.set_square(&Coordinates{letter: ColumnLetter::H, number: row_number}, empty_square);
+                self.set_square(&Coordinates{letter: ColumnLetter::E, number: row_number}, empty_square);
+                self.set_square(&Coordinates{letter: ColumnLetter::G, number: row_number}, pulled_king);
+                self.set_square(&Coordinates{letter: ColumnLetter::F, number: row_number}, pulled_rook);
+            },
+            false => {
+                self.set_square(&Coordinates{letter: ColumnLetter::A, number: row_number}, empty_square);
+                self.set_square(&Coordinates{letter: ColumnLetter::E, number: row_number}, empty_square);
+                self.set_square(&Coordinates{letter: ColumnLetter::C, number: row_number}, pulled_king);
+                self.set_square(&Coordinates{letter: ColumnLetter::D, number: row_number}, pulled_rook);
+            }
+        };
+    }
+
     pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) -> MoveResult {
-        let from_square = self.retreive_square(&from);
-        let mut opt_king_location: Option<Coordinates> = None;
-        let mut king_color: PieceColor = PieceColor::Black;
+        let from_square = self.retreive_square(&from).clone();
+        let replacement_square = from_square.clone();
         let move_result: MoveResult;
         match from_square {
             Square::Full(piece) => {
                 if piece.color == self.turn {
-                    let (move_legal, taking_piece, target_piece_color, target_piece_kind) = parse_move_legality(piece.kind, from, to, self);
+                    let (move_legal, taking_piece, target_piece_color, target_piece_kind, move_direction, move_distance) = parse_move_legality(piece.kind, from, to, self);
 
                     if move_legal {
                            // if we're moving the king we need to update his coords
-                        if piece.kind == PieceKind::King {
-                                king_color = piece.color;
-                                opt_king_location = Some(Coordinates{letter: to.letter, number: to.number});
+                        match piece.kind {
+                            PieceKind::King => {
+                                // if we got here, the rule checker already knows that this move is safe and legal. Lets check if we're castling, then update appropriately
+                                if move_distance == 2 {
+                                    if move_direction == MoveDirection::Right {
+                                        self.castle(piece.color, true);
+                                    } else if move_direction == MoveDirection::Left {
+                                        self.castle(piece.color, false);
+                                    }
+                                }
+                                self.update_king_location(*from, piece.color);
+                            },
+                            PieceKind::Rook => {
+                                // we need to check if they're moving off their original square, and negate castling rights as necessary.
+                                if from.letter == ColumnLetter::A {
+                                    //we can just do this dumbly, since it doesn't cost much, and firing it off every time ensures safety.
+                                    //Lesson: sometimes it's cheaper to just ensure bool state than it is to check every time.
+                                    self.remove_castling_rights(piece.color, false);
+                                } else if from.letter == ColumnLetter::H {
+                                    self.remove_castling_rights(piece.color, true);
+                                }
+                            },
+                            _ => {}
                         }
-                        let replacement_square = from_square.clone();
                         self.set_square(&from, Square::Empty);
                         self.set_square(&to, replacement_square);
                         if taking_piece {
@@ -569,13 +691,6 @@ impl Board {
                 }
                 }, //
             Square::Empty => move_result = MoveResult::EmptySquare
-        }
-
-        match opt_king_location {
-            Some(location) => {
-                self.update_king_location(location, king_color);
-            },
-            None => ()
         }
 
         move_result

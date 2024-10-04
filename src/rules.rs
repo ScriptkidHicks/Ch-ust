@@ -16,7 +16,7 @@ pub fn would_king_be_in_danger(board: Board, from: &Coordinates, to: &Coordinate
     }        
 }
 
-pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates, chess_board: &Board) -> (bool, bool, PieceColor, PieceKind) {
+pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates, chess_board: &Board) -> (bool, bool, PieceColor, PieceKind, MoveDirection, usize) {
     let move_information: SquareToSquareInformation = measure_distance(from, to);
     let mut successful = false;
     let from_square = chess_board.retreive_square(&from);
@@ -101,12 +101,13 @@ pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates
                         } else if move_information.distance == 2 {
                             match move_information.move_direction {
                                 MoveDirection::Left => {
-                                    if chess_board.king_can_castle(PieceColor::Black, false) {
+                                    if chess_board.king_can_castle(from_piece.color, false) {
+                                        //ok, we now need to do an additional check to see if castling the king on this side would be safe.
                                         successful = true;
                                     }
                                 },
                                 MoveDirection::Right => {
-                                    if chess_board.king_can_castle(PieceColor::Black, true) {
+                                    if chess_board.king_can_castle(from_piece.color, true) {
                                         successful = true;
                                     }
                                 },
@@ -131,5 +132,5 @@ pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates
 
     
 
-    (successful, taking_piece, target_square_piece_color, target_square_piece_kind)
+    (successful, taking_piece, target_square_piece_color, target_square_piece_kind, move_information.move_direction, move_information.distance)
 }
