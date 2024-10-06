@@ -2,7 +2,7 @@ use core::fmt;
 use std::{fmt::{write, Error}, ops::Range, path, slice::Iter, usize};
 use self::ColumnLetter::*;
 
-use crate::{pieces::*, rules::parse_move_legality};
+use crate::{pieces::*, rules::{king_checkmate_state, parse_move_legality, Mate_State}};
 
 pub fn usize_difference(a: usize, b: usize) -> usize {
     if a > b { 
@@ -201,6 +201,41 @@ pub enum Square {
     Full(Piece)
 }
 
+impl Square {
+    pub fn get_legal_targets(&self) -> Vec<Coordinates> {
+        let mut legal_target_squares: Vec<Coordinates> = Vec::new();
+
+        match self {
+            Square::Empty => {//do nothing. No legal targets for an empty square.
+                },
+            Square::Full(piece) => {
+                match piece.kind {
+                    PieceKind::Pawn => {
+
+                    },
+                    PieceKind::Rook => {
+                        
+                    },
+                    PieceKind::Knight => {
+
+                    },
+                    PieceKind::Bishop => {
+
+                    },
+                    PieceKind::Queen => {
+
+                    },
+                    PieceKind::King => {
+
+                    }
+                }
+            }
+        }
+
+        legal_target_squares
+    }
+}
+
 impl fmt::Display for Square {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -330,7 +365,12 @@ impl SideInformation {
 }
 
 pub enum MoveResult {
-    MoveCompleted,
+    CompletedSafely,
+    BlackKingCheckmated,
+    WhiteKingCheckmated,
+    BlackKingChecked,
+    WhiteKingChecked,
+    Stalemate,
     WrongTurn,
     MoveIllegal,
     EmptySquare
@@ -361,6 +401,18 @@ impl Board {
             white_side_information: SideInformation::default(PieceColor::White),
             black_side_information: SideInformation::default(PieceColor::Black)
         }
+    }
+
+    pub fn search_squares(&self, side_color: PieceColor, callback: fn(&Square, PieceColor, &Board) -> bool) -> bool {
+        for row in self.rows.iter() {
+            for square in row.squares.iter() {
+                if callback(square, side_color, self) {
+                    return true
+                }
+            }
+        }
+
+        false
     }
     
     fn convert_row_usize(size: usize) -> usize {
@@ -685,16 +737,45 @@ impl Board {
                             PieceColor::Black => self.turn = PieceColor::White,
                             PieceColor::White => self.turn = PieceColor::Black
                         }
-                        //now we have to update the coordinates of the king if necessary
-                        move_result = MoveResult::MoveCompleted
+                        let opponent_color = match piece.color {
+                            PieceColor::Black => PieceColor::White,
+                            PieceColor::White => PieceColor::Black
+                        };
+                        //we can make the move they are requesting. Lets check what state this leaves the board in.
+                        match king_checkmate_state(opponent_color, &self) {
+                            Mate_State::Check => {
+                                match opponent_color {
+                                    PieceColor::Black => {
+                                        move_result = MoveResult::BlackKingChecked;
+                                    },
+                                    PieceColor::White => {
+                                        move_result = MoveResult::WhiteKingChecked;
+                                    }
+                                }
+                            }
+                            Mate_State::CheckMate => {
+                                match opponent_color {
+                                    PieceColor::Black => {move_result = MoveResult::BlackKingCheckmated},
+                                    PieceColor::White => {move_result = MoveResult::WhiteKingCheckmated}
+                                }
+                            },
+                            Mate_State::StaleMate => {
+                                move_result = MoveResult::Stalemate;
+                            },
+                            Mate_State::Safe => {
+                                move_result = MoveResult::CompletedSafely;
+                            }
+                        }
                     } else {
-                        move_result = MoveResult::MoveIllegal
+                        move_result = MoveResult::MoveIllegal;
                     }
                 } else {
-                    move_result = MoveResult::WrongTurn
+                    move_result = MoveResult::WrongTurn;
                 }
                 }, //
-            Square::Empty => move_result = MoveResult::EmptySquare
+            Square::Empty => { 
+                move_result = MoveResult::EmptySquare;
+            }
         }
 
         move_result

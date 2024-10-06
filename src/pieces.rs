@@ -41,13 +41,6 @@ impl fmt::Display for PieceKind {
 }
 
 impl PieceKind {
-    pub fn get_range(&self) -> u32 {
-        match self {
-            PieceKind::Pawn | PieceKind::King => 1,
-            PieceKind::Knight => 2,
-            _ => 8
-        }
-    }
 
     pub fn get_value(&self) -> u32 {
         match self {

@@ -1,6 +1,75 @@
 use crate::board::*;
 use crate::pieces::*;
 
+pub enum Mate_State {
+    StaleMate,
+    CheckMate,
+    Check,
+    Safe
+}
+
+fn legal_move_available_from_this_square(square: &Square, turn_color: PieceColor, chess_board: &Board) -> bool {
+    match square {
+        Square::Empty => {
+            false
+        }, 
+        Square::Full(piece) => {
+            if piece.color == turn_color {
+                match piece.kind {
+                    PieceKind::Pawn => {
+                        match piece.color {
+                            PieceColor::Black => {
+
+                            },
+                            PieceColor::White => {
+                                
+                            }
+                        }
+                        true
+                    },
+                    PieceKind::Rook => {
+                        true
+                    },
+                    PieceKind::Knight => {
+                        true
+                    },
+                    PieceKind::Bishop => {
+                        true
+                    }, 
+                    PieceKind::King => {
+                        true
+                    },
+                    PieceKind::Queen => {
+                        true
+                    }
+                }
+            } else {
+                false
+            }
+        }
+    }
+}
+
+pub fn king_checkmate_state(king_color: PieceColor, chess_board: &Board) -> Mate_State {
+    let king_currently_in_danger = chess_board.is_king_in_danger(king_color);
+    let legal_move_available = chess_board.search_squares(king_color, legal_move_available_from_this_square);
+
+    match (king_currently_in_danger, legal_move_available) {
+        (true, true) => {
+            Mate_State::Check
+        },
+        (true, false) => {
+            Mate_State::CheckMate
+        },
+        (false, true) => {
+            Mate_State::Safe
+        },
+        (false, false) => {
+            Mate_State::StaleMate
+        }
+    }
+}
+
 pub fn would_king_be_in_danger(board: Board, from: &Coordinates, to: &Coordinates) -> bool {
     let mut copied_board = board.clone();
 
