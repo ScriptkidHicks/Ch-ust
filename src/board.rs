@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{fmt::{write, Error}, ops::Range, path, slice::Iter, usize};
+use std::{collections::HashMap, default, fmt::{write, Error}, ops::Range, path, slice::Iter, usize};
 use self::ColumnLetter::*;
 
 use crate::{pieces::*, rules::{king_checkmate_state, parse_move_legality, Mate_State}};
@@ -202,7 +202,8 @@ pub enum Square {
 }
 
 impl Square {
-    pub fn get_legal_targets(&self) -> Vec<Coordinates> {
+    pub fn get_legal_targets(&self, coordinates: &Coordinates, board: &Board) -> Vec<Coordinates> {
+        println!("getting legal targets with {}", coordinates);
         let mut legal_target_squares: Vec<Coordinates> = Vec::new();
 
         match self {
@@ -211,13 +212,150 @@ impl Square {
             Square::Full(piece) => {
                 match piece.kind {
                     PieceKind::Pawn => {
-
+                        match piece.color {
+                            PieceColor::Black => {
+                                if coordinates.number < 8 {
+                                    // check one space move
+                                    let up_one_square = Coordinates{ letter: coordinates.letter.clone(), number: coordinates.number + 1 };
+                                    let (up_one_success, _, _, _ , _, _) = parse_move_legality(piece.kind, &coordinates, &up_one_square, &board);
+                                    if up_one_success {
+                                        legal_target_squares.push(up_one_square);
+                                        //only check down 2 if down one was legal.
+                                        if coordinates.number == 2 {
+                                            let up_two_square = Coordinates{ letter: coordinates.letter.clone(), number: coordinates.number - 2 };
+                                            let (up_2_success, _, _ , _, _, _) = parse_move_legality(piece.kind, &coordinates, &up_two_square, &board);
+                                            if up_2_success {
+                                                legal_target_squares.push(up_two_square);
+                                            }
+                                        }
+                                    }
+                                    if coordinates.letter != ColumnLetter::A {
+                                        let up_left = Coordinates{ letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() - 1), number: coordinates.number - 1};
+                                        let (up_left_success, _, _, _, _, _) = parse_move_legality(piece.kind, &coordinates, &up_left, &board);
+                                        if up_left_success {
+                                         legal_target_squares.push(up_left);   
+                                        }
+                                    }
+                                    if coordinates.letter != ColumnLetter::H {
+                                        let up_right = Coordinates{ letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() - 1), number: coordinates.number - 1};
+                                        let (up_right_success, _, _, _, _, _) = parse_move_legality(piece.kind, &coordinates, &up_right, &board);
+                                        if up_right_success {
+                                         legal_target_squares.push(up_right);   
+                                        }
+                                    }
+                                }
+                            },
+                            PieceColor::White => {
+                                if coordinates.number > 1 {
+                                    // check one space move
+                                    let down_one_square = Coordinates{ letter: coordinates.letter.clone(), number: coordinates.number + 1 };
+                                    let (down_one_success, _, _, _ , _, _) = parse_move_legality(piece.kind, &coordinates, &down_one_square, &board);
+                                    if down_one_success {
+                                        legal_target_squares.push(down_one_square);
+                                        //only check down 2 if down one was legal.
+                                        if coordinates.number == 2 {
+                                            let down_two_square = Coordinates{ letter: coordinates.letter.clone(), number: coordinates.number + 2 };
+                                            let (down_2_success, _, _ , _, _, _) = parse_move_legality(piece.kind, &coordinates, &down_two_square, &board);
+                                            if down_2_success {
+                                                legal_target_squares.push(down_two_square);
+                                            }
+                                        }
+                                    }
+                                    if coordinates.letter != ColumnLetter::A {
+                                        let down_left = Coordinates{ letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() + 1), number: coordinates.number - 1};
+                                        let (down_left_success, _, _, _, _, _) = parse_move_legality(piece.kind, &coordinates, &down_left, &board);
+                                        if down_left_success {
+                                         legal_target_squares.push(down_left);   
+                                        }
+                                    }
+                                    if coordinates.letter != ColumnLetter::H {
+                                        let down_right = Coordinates{ letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() + 1), number: coordinates.number - 1};
+                                        let (down_right_success, _, _, _, _, _) = parse_move_legality(piece.kind, &coordinates, &down_right, &board);
+                                        if down_right_success {
+                                         legal_target_squares.push(down_right);   
+                                        }
+                                    }
+                                }
+                            }
+                        };
                     },
                     PieceKind::Rook => {
-                        
+                        for i in 1..9 {
+                            let column_target = Coordinates{letter: ColumnLetter::construct_letter_from_usize(i), number: coordinates.number};
+                            let row_target=  Coordinates{ letter: coordinates.letter.clone(), number: i};
+                            let (column_move_legal, _, _, _, _, _) = parse_move_legality(piece.kind, &coordinates, &column_target, &board);
+                            let (row_move_legal, _, _, _, _, _) = parse_move_legality(piece.kind, &coordinates, &row_target, &board);
+                            if column_move_legal {legal_target_squares.push(column_target);}
+                            if row_move_legal {legal_target_squares.push(row_target);}
+                        }
                     },
                     PieceKind::Knight => {
-
+                        if coordinates.number < 8 {
+                            if coordinates.number < 7 {
+                                //check the highest two squares
+                                if coordinates.letter != ColumnLetter::H {
+                                    let upmost_right = Coordinates{letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() + 1), number: coordinates.number + 2};
+                                    let (upmost_right_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &upmost_right, board);
+                                    if upmost_right_legal {
+                                        legal_target_squares.push(upmost_right);
+                                    }
+                                }
+                                if coordinates.letter != ColumnLetter::A {
+                                    let upmost_left = Coordinates{letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() - 1), number: coordinates.number + 2};
+                                    let (upmost_left_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &upmost_left, board);
+                                    if upmost_left_legal {
+                                        legal_target_squares.push(upmost_left);
+                                    }
+                                }
+                            }
+                            if coordinates.letter.eval() > 1 {
+                                let left_up = Coordinates {letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() - 2), number: coordinates.number + 1};
+                                let (left_up_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &left_up, board);
+                                if left_up_legal {
+                                    legal_target_squares.push(left_up);
+                                }
+                            }
+                            if coordinates.letter.eval() < 6 {
+                                let right_up = Coordinates {letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() + 2), number: coordinates.number + 1};
+                                let (right_up_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &right_up, board);
+                                if right_up_legal {
+                                    legal_target_squares.push(right_up);
+                                }
+                            }
+                        }
+                        if coordinates.number > 1 {
+                            if coordinates.number > 2 {
+                                //check the highest two squares
+                                if coordinates.letter != ColumnLetter::H {
+                                    let downmost_right = Coordinates{letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() + 1), number: coordinates.number - 2};
+                                    let (downmost_right_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &downmost_right, board);
+                                    if downmost_right_legal {
+                                        legal_target_squares.push(downmost_right);
+                                    }
+                                }
+                                if coordinates.letter != ColumnLetter::A {
+                                    let downmost_left = Coordinates{letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() - 1), number: coordinates.number - 2};
+                                    let (downmost_left_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &downmost_left, board);
+                                    if downmost_left_legal {
+                                        legal_target_squares.push(downmost_left);
+                                    }
+                                }
+                            }
+                            if coordinates.letter.eval() > 1 {
+                                let left_down = Coordinates {letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() - 2), number: coordinates.number - 1};
+                                let (left_down_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &left_down, board);
+                                if left_down_legal {
+                                    legal_target_squares.push(left_down);
+                                }
+                            }
+                            if coordinates.letter.eval() < 6 {
+                                let right_down = Coordinates {letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() + 2), number: coordinates.number - 1};
+                                let (right_down_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &right_down, board);
+                                if right_down_legal {
+                                    legal_target_squares.push(right_down);
+                                }
+                            }
+                        }
                     },
                     PieceKind::Bishop => {
 
@@ -233,6 +371,14 @@ impl Square {
         }
 
         legal_target_squares
+    }
+
+    pub fn show_me_legal_squares(&self, coordinates: &Coordinates, board: &Board) {
+        let legal_squares = self.get_legal_targets(coordinates, board);
+        for target in legal_squares {
+            print!("{} ", target);
+        }
+        println!();
     }
 }
 
@@ -314,6 +460,7 @@ impl Row {
         }
     }
 }
+
 
 #[derive(Clone)]
 struct SideInformation {
@@ -403,6 +550,11 @@ impl Board {
         }
     }
 
+    pub fn show_me_legal_squares(&self, coords: &Coordinates) {
+        let retrieved_square = self.retreive_square(coords);
+        retrieved_square.show_me_legal_squares(coords, self);
+    }
+
     pub fn search_squares(&self, side_color: PieceColor, callback: fn(&Square, PieceColor, &Board) -> bool) -> bool {
         for row in self.rows.iter() {
             for square in row.squares.iter() {
@@ -420,7 +572,7 @@ impl Board {
     }
 
     pub fn retreive_square(&self, coords: &Coordinates) -> &Square {
-        &self.rows[Self::convert_row_usize(coords.number)].squares[coords.letter.eval()]
+            &self.rows[Self::convert_row_usize(coords.number)].squares[coords.letter.eval()]
     }
 
     pub fn set_square(&mut self, coords: &Coordinates, square: Square) {
