@@ -202,6 +202,78 @@ pub enum Square {
 }
 
 impl Square {
+    pub fn get_legal_cross_targets(&self, coordinates: &Coordinates, piece_kind: PieceKind, board: &Board, legal_target_squares: &mut Vec<Coordinates>) {
+        for i in 1..9 {
+            let column_target = Coordinates{letter: ColumnLetter::construct_letter_from_usize(i), number: coordinates.number};
+            let row_target=  Coordinates{ letter: coordinates.letter.clone(), number: i};
+            let (column_move_legal, _, _, _, _, _) = parse_move_legality(piece_kind, &coordinates, &column_target, &board);
+            let (row_move_legal, _, _, _, _, _) = parse_move_legality(piece_kind, &coordinates, &row_target, &board);
+            if column_move_legal {legal_target_squares.push(column_target);}
+            if row_move_legal {legal_target_squares.push(row_target);}
+        }
+    }
+
+    pub fn get_legal_diagonal_targets(&self, coordinates: &Coordinates, piece_kind: PieceKind, board: &Board, legal_target_squares: &mut Vec<Coordinates>){
+        let mut moving_letter_value = coordinates.letter.eval();
+        let mut moving_number_value = coordinates.number;
+
+        //up right
+        while moving_letter_value < 7 && moving_number_value < 7 {
+            moving_letter_value += 1;
+            moving_number_value += 1;
+            let target_coords = Coordinates{letter: ColumnLetter::construct_letter_from_usize(moving_letter_value), number: moving_number_value};
+            let (target_legal, _, _, _, _, _) = parse_move_legality(piece_kind, coordinates, &target_coords, board);
+            if target_legal {
+                legal_target_squares.push(target_coords);
+            }
+        }
+
+        //reset
+        moving_letter_value = coordinates.letter.eval();
+        moving_number_value = coordinates.number;
+
+        //down right
+        while moving_letter_value < 7 && moving_number_value > 1 {
+            moving_letter_value += 1;
+            moving_number_value -= 1;
+            let target_coords = Coordinates{letter: ColumnLetter::construct_letter_from_usize(moving_letter_value), number: moving_number_value};
+            let (target_legal, _, _, _, _, _) = parse_move_legality(piece_kind, coordinates, &target_coords, board);
+            if target_legal {
+                legal_target_squares.push(target_coords);
+            }
+        }
+
+        //reset
+        moving_letter_value = coordinates.letter.eval();
+        moving_number_value = coordinates.number;
+
+        //up left
+        while moving_letter_value > 0 && moving_number_value < 7 {
+            moving_letter_value -= 1;
+            moving_number_value += 1;
+            let target_coords = Coordinates{letter: ColumnLetter::construct_letter_from_usize(moving_letter_value), number: moving_number_value};
+            let (target_legal, _, _, _, _, _) = parse_move_legality(piece_kind, coordinates, &target_coords, board);
+            if target_legal {
+                legal_target_squares.push(target_coords);
+            }
+        }
+
+        //reset
+        moving_letter_value = coordinates.letter.eval();
+        moving_number_value = coordinates.number;
+
+        //down left
+        while moving_letter_value > 0 && moving_number_value > 1 {
+            moving_letter_value -= 1;
+            moving_number_value -= 1;
+            let target_coords = Coordinates{letter: ColumnLetter::construct_letter_from_usize(moving_letter_value), number: moving_number_value};
+            let (target_legal, _, _, _, _, _) = parse_move_legality(piece_kind, coordinates, &target_coords, board);
+            if target_legal {
+                legal_target_squares.push(target_coords);
+            }
+        }
+    }
+
     pub fn get_legal_targets(&self, coordinates: &Coordinates, board: &Board) -> Vec<Coordinates> {
         println!("getting legal targets with {}", coordinates);
         let mut legal_target_squares: Vec<Coordinates> = Vec::new();
@@ -280,14 +352,7 @@ impl Square {
                         };
                     },
                     PieceKind::Rook => {
-                        for i in 1..9 {
-                            let column_target = Coordinates{letter: ColumnLetter::construct_letter_from_usize(i), number: coordinates.number};
-                            let row_target=  Coordinates{ letter: coordinates.letter.clone(), number: i};
-                            let (column_move_legal, _, _, _, _, _) = parse_move_legality(piece.kind, &coordinates, &column_target, &board);
-                            let (row_move_legal, _, _, _, _, _) = parse_move_legality(piece.kind, &coordinates, &row_target, &board);
-                            if column_move_legal {legal_target_squares.push(column_target);}
-                            if row_move_legal {legal_target_squares.push(row_target);}
-                        }
+                        self.get_legal_cross_targets(coordinates, piece.kind, board, &mut legal_target_squares);
                     },
                     PieceKind::Knight => {
                         if coordinates.number < 8 {
@@ -358,10 +423,11 @@ impl Square {
                         }
                     },
                     PieceKind::Bishop => {
-
+                        self.get_legal_diagonal_targets(coordinates, piece.kind, board, &mut legal_target_squares);
                     },
                     PieceKind::Queen => {
-
+                        self.get_legal_cross_targets(coordinates, piece.kind, board, &mut legal_target_squares);
+                        self.get_legal_diagonal_targets(coordinates, piece.kind, board, &mut legal_target_squares);
                     },
                     PieceKind::King => {
 
@@ -706,7 +772,7 @@ impl Board {
             MoveDirection::Down => {
                 for i in (to_number_value + 1)..(from_number_value) {
                     match self.retreive_square(&Coordinates{ letter: from.letter, number: i}) {
-                        Square::Full(piece) => {
+                        Square::Full(_) => {
                             path_clear = false;
                             break;
                         },
@@ -728,7 +794,7 @@ impl Board {
             MoveDirection::Left => {
                 for i in (to_letter_value + 1)..from_letter_value {
                     match self.retreive_square(&Coordinates {letter: ColumnLetter::construct_letter_from_usize(i), number: from_number_value}){
-                        Square::Full(piece) => {
+                        Square::Full(_) => {
                             path_clear = false;
                             break;  
                         },
@@ -739,7 +805,7 @@ impl Board {
             MoveDirection::Right => {
                 for i in (from_letter_value + 1)..to_letter_value {
                     match self.retreive_square(&Coordinates {letter: ColumnLetter::construct_letter_from_usize(i), number: from_number_value}){
-                        Square::Full(piece) => {
+                        Square::Full(_) => {
                             path_clear = false;
                             break;  
                         },
@@ -754,7 +820,7 @@ impl Board {
                         letter: ColumnLetter::construct_letter_from_usize(from_letter_value - i),
                         number: from_number_value - i
                     }) {
-                        Square::Full(piece) => {
+                        Square::Full(_) => {
                             path_clear = false;
                             break;
                         },
@@ -766,7 +832,7 @@ impl Board {
                 let distance = to_letter_value - from_letter_value;
                 for i in 1..distance {
                     match self.retreive_square(&Coordinates{letter: ColumnLetter::construct_letter_from_usize(from_letter_value + i), number: from_number_value - i}) {
-                        Square::Full(piece) => {
+                        Square::Full(_) => {
                             path_clear = false;
                             break;
                         },
@@ -782,7 +848,7 @@ impl Board {
                         letter: ColumnLetter::construct_letter_from_usize(from_letter_value - i),
                         number: from_number_value + i
                     }) {
-                        Square::Full(piece) => {
+                        Square::Full(_) => {
                             path_clear = false;
                             break;
                         },
@@ -795,7 +861,7 @@ impl Board {
                 for i in 1..distance {
                     // we can rely on the distance being equal, otherwise the move is illegal.
                     match self.retreive_square(&Coordinates {letter: ColumnLetter::construct_letter_from_usize(from_letter_value + i), number: from_number_value + i}) {
-                        Square::Full(piece) => {
+                        Square::Full(_) => {
                             path_clear = false;
                             break;
                         },
