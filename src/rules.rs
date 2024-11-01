@@ -180,7 +180,11 @@ pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates
                                         successful = true;
                                     }
                                 },
-                                _ => ()
+                                MoveDirection::Up | MoveDirection::Down => (),
+                                _ => {
+                                    //for any of the other diagonal moves we allow this move distance
+                                    successful = true;
+                                }
                             }
                         }
                     },
