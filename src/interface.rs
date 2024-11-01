@@ -2,7 +2,7 @@ use crate::board::*;
 use crate::pieces::*;
 use crate::rules::*;
 
-fn parse_char_to_int(row_number: char) -> Result<usize, &'static str> {
+fn parse_char_to_int(row_number: char) -> Result<isize, &'static str> {
     match row_number {
         '1' => Ok(1),
         '2' => Ok(2),
@@ -18,7 +18,7 @@ fn parse_char_to_int(row_number: char) -> Result<usize, &'static str> {
 
 pub fn parse_square(input_string: &str) -> Result<Coordinates, &'static str> {
     let col: ColumnLetter;
-    let row: usize;
+    let row: isize;
     if input_string.len() != 2 {
         Err("incorrect length")
     } else {
