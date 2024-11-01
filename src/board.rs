@@ -195,6 +195,45 @@ pub fn measure_distance(from: &Coordinates, to: &Coordinates) -> SquareToSquareI
     }
 }
 
+pub enum DiagonalDirection {
+    UpLeft,
+    UpRight,
+    DownLeft,
+    DownRight
+}
+
+impl DiagonalDirection {
+    pub fn conditional_continue(&self, letter_value: usize, number_value: usize) -> bool {
+        match self {
+            Self::DownLeft => letter_value > 0 && number_value > 1,
+            Self::DownRight => letter_value < 7 && number_value > 1,
+            Self::UpLeft => letter_value > 0 && number_value < 7,
+            Self::UpRight => letter_value < 7 && number_value < 7,
+        }
+    }
+
+    pub fn modify_letter_and_number_values(&self, letter_value: &mut usize, number_value: &mut usize) {
+        match self {
+            Self::DownLeft => {
+                *letter_value -= 1;
+                *number_value -= 1;
+            },
+            Self::DownRight => {
+                *letter_value += 1;
+                *number_value -= 1;
+            },
+            Self::UpLeft => {
+                *letter_value -= 1;
+                *number_value += 1;
+            },
+            Self::UpRight => {
+                *letter_value += 1;
+                *number_value += 1;
+            }
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum Square {
     Empty,
@@ -213,59 +252,12 @@ impl Square {
         }
     }
 
-    pub fn get_legal_diagonal_targets(&self, coordinates: &Coordinates, piece_kind: PieceKind, board: &Board, legal_target_squares: &mut Vec<Coordinates>){
+    pub fn get_legal_single_diagonal(&self, coordinates: &Coordinates, direction: DiagonalDirection, piece_kind: PieceKind, board: &Board, legal_target_squares: &mut Vec<Coordinates>) {
         let mut moving_letter_value = coordinates.letter.eval();
         let mut moving_number_value = coordinates.number;
 
-        //up right
-        while moving_letter_value < 7 && moving_number_value < 7 {
-            moving_letter_value += 1;
-            moving_number_value += 1;
-            let target_coords = Coordinates{letter: ColumnLetter::construct_letter_from_usize(moving_letter_value), number: moving_number_value};
-            let (target_legal, _, _, _, _, _) = parse_move_legality(piece_kind, coordinates, &target_coords, board);
-            if target_legal {
-                legal_target_squares.push(target_coords);
-            }
-        }
-
-        //reset
-        moving_letter_value = coordinates.letter.eval();
-        moving_number_value = coordinates.number;
-
-        //down right
-        while moving_letter_value < 7 && moving_number_value > 1 {
-            moving_letter_value += 1;
-            moving_number_value -= 1;
-            let target_coords = Coordinates{letter: ColumnLetter::construct_letter_from_usize(moving_letter_value), number: moving_number_value};
-            let (target_legal, _, _, _, _, _) = parse_move_legality(piece_kind, coordinates, &target_coords, board);
-            if target_legal {
-                legal_target_squares.push(target_coords);
-            }
-        }
-
-        //reset
-        moving_letter_value = coordinates.letter.eval();
-        moving_number_value = coordinates.number;
-
-        //up left
-        while moving_letter_value > 0 && moving_number_value < 7 {
-            moving_letter_value -= 1;
-            moving_number_value += 1;
-            let target_coords = Coordinates{letter: ColumnLetter::construct_letter_from_usize(moving_letter_value), number: moving_number_value};
-            let (target_legal, _, _, _, _, _) = parse_move_legality(piece_kind, coordinates, &target_coords, board);
-            if target_legal {
-                legal_target_squares.push(target_coords);
-            }
-        }
-
-        //reset
-        moving_letter_value = coordinates.letter.eval();
-        moving_number_value = coordinates.number;
-
-        //down left
-        while moving_letter_value > 0 && moving_number_value > 1 {
-            moving_letter_value -= 1;
-            moving_number_value -= 1;
+        while DiagonalDirection::conditional_continue(&direction, moving_letter_value, moving_number_value) {
+            DiagonalDirection::modify_letter_and_number_values(&direction, &mut moving_letter_value, &mut moving_number_value);
             let target_coords = Coordinates{letter: ColumnLetter::construct_letter_from_usize(moving_letter_value), number: moving_number_value};
             let (target_legal, _, _, _, _, _) = parse_move_legality(piece_kind, coordinates, &target_coords, board);
             if target_legal {
@@ -274,8 +266,17 @@ impl Square {
         }
     }
 
+    pub fn get_legal_diagonal_targets(&self, coordinates: &Coordinates, piece_kind: PieceKind, board: &Board, legal_target_squares: &mut Vec<Coordinates>){
+        self.get_legal_single_diagonal(coordinates, DiagonalDirection::UpRight, piece_kind, board, legal_target_squares);
+
+        self.get_legal_single_diagonal(coordinates, DiagonalDirection::DownRight, piece_kind, board, legal_target_squares);
+
+        self.get_legal_single_diagonal(coordinates, DiagonalDirection::UpLeft, piece_kind, board, legal_target_squares);
+
+        self.get_legal_single_diagonal(coordinates, DiagonalDirection::DownLeft, piece_kind, board, legal_target_squares);
+    }
+
     pub fn get_legal_targets(&self, coordinates: &Coordinates, board: &Board) -> Vec<Coordinates> {
-        println!("getting legal targets with {}", coordinates);
         let mut legal_target_squares: Vec<Coordinates> = Vec::new();
 
         match self {
@@ -430,7 +431,77 @@ impl Square {
                         self.get_legal_diagonal_targets(coordinates, piece.kind, board, &mut legal_target_squares);
                     },
                     PieceKind::King => {
+                        //no great way to do this other than to just check each square adjacent to the king.
+                        let not_in_top_row = coordinates.number < 8;
+                        let not_in_bottom_row = coordinates.number > 1;
+                        let not_in_leftmost_column = coordinates.letter.eval() > 0;
+                        let not_in_rightmost_column = coordinates.letter.eval() < 8;
 
+                        if not_in_top_row {
+                            let directly_up = Coordinates{letter: coordinates.letter, number: coordinates.number + 1};
+                            let (directly_up_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &directly_up, board);
+                            if directly_up_legal {
+                                legal_target_squares.push(directly_up);
+                            }
+
+                            if not_in_rightmost_column {
+                                let up_right = Coordinates{letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() + 1), number: coordinates.number + 1};
+                                let (up_right_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &up_right, board);
+                                if up_right_legal {
+                                    legal_target_squares.push(up_right);
+                                }
+                            }
+
+                            if not_in_leftmost_column {
+                                let up_left = Coordinates{letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() - 1), number: coordinates.number + 1};
+                                let (up_left_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &up_left, board);
+                                if up_left_legal {
+                                    legal_target_squares.push(up_left);
+                                }
+                            }
+                        }
+
+                        if not_in_bottom_row {
+                            let directly_down = Coordinates{letter: coordinates.letter, number: coordinates.number - 1};
+                            let (directly_down_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &directly_down, board);
+                            if directly_down_legal {
+                                legal_target_squares.push(directly_down);
+                            }
+
+                            if not_in_rightmost_column {
+                                let down_right = Coordinates{letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() + 1), number: coordinates.number - 1};
+                                let (down_right_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &down_right, board);
+                                if down_right_legal{
+                                    legal_target_squares.push(down_right);
+                                }
+                            }
+
+                            if not_in_leftmost_column {
+                                let down_left = Coordinates{letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() - 1), number: coordinates.number - 1};
+                                let (down_left_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &down_left, board);
+                                if down_left_legal{
+                                    legal_target_squares.push(down_left);
+                                }
+                            }
+                        }
+
+                        if not_in_leftmost_column {
+                            let left = Coordinates{letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() - 1), number: coordinates.number};
+                                let (left_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &left, board);
+                                if left_legal{
+                                    legal_target_squares.push(left);
+                            }
+                        }
+
+                        if not_in_rightmost_column {
+                            let right = Coordinates{letter: ColumnLetter::construct_letter_from_usize(coordinates.letter.eval() + 1), number: coordinates.number};
+                                let (right_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &right, board);
+                                if right_legal{
+                                    legal_target_squares.push(right);
+                            }
+                        }
+
+                        //if (coordinates.n)
                     }
                 }
             }
@@ -638,7 +709,7 @@ impl Board {
     }
 
     pub fn retreive_square(&self, coords: &Coordinates) -> &Square {
-            &self.rows[Self::convert_row_usize(coords.number)].squares[coords.letter.eval()]
+        &self.rows[Self::convert_row_usize(coords.number)].squares[coords.letter.eval()]
     }
 
     pub fn set_square(&mut self, coords: &Coordinates, square: Square) {
