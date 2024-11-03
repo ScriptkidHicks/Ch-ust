@@ -149,10 +149,18 @@ impl fmt::Display for Coordinates {
 
 pub fn measure_distance(from: &Coordinates, to: &Coordinates) -> SquareToSquareInformation {
     let mut garnered_move_direction: MoveDirection = MoveDirection::NoMove;
+    if from.number < 1 || from.number > 8 || to.number < 0 || to.number > 8 {
+        return SquareToSquareInformation {
+            move_direction: garnered_move_direction,
+            distance: 0
+        }
+    }
+    
 
     let lat_distance = isize_difference(from.letter.eval(), to.letter.eval()); 
 
     let vert_distance = isize_difference(from.number, to.number);
+
 
     if from.letter == to.letter {
         if from.number > to.number {
@@ -323,7 +331,23 @@ impl Square {
                         self.get_legal_diagonal_targets(coordinates, piece.kind, board, &mut legal_target_squares);
                     },
                     PieceKind::King => {
-                    
+                        for row_mod in -1..2 {
+                            for col_mod in -1..2 {
+                                match ColumnLetter::construct_letter_from_isize(coordinates.letter.eval() + col_mod) {
+                                    Ok(new_letter) => {
+                                        //ok, we have a new valid column, So lets go check if we can get that square.
+                                        let investigating_coordinates = Coordinates{letter: new_letter, number: coordinates.number + row_mod};
+                                        let (move_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &investigating_coordinates, board);
+                                        if move_legal {
+                                            legal_target_squares.push(investigating_coordinates);
+                                        }
+                                    },
+                                    Err(_) => {
+                                        //That's ok, it's just out of bounds
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -530,8 +554,12 @@ impl Board {
         false
     }
     
-    fn convert_row_usize(size: usize) -> usize {
-        7 - (size - 1)
+    fn convert_row_usize(size: usize) -> Result<usize, &'static str> {
+        if (size > 0 && size < 9){
+            Ok(7 - (size - 1))
+        } else {
+            Err("attempted to perform subtraction out of bounds of usize")
+        }
     }
 
     pub fn retreive_square(&self, coords: &Coordinates) -> Result<Square, &'static str> {
@@ -539,7 +567,14 @@ impl Board {
             Ok(usize_number) => {
                 match board_safe_isize_converter(coords.letter.eval()) {
                     Ok(usize_letter) => {
-                        Ok((self.rows[Self::convert_row_usize(usize_number)].squares[usize_letter]).clone())
+                        match Self::convert_row_usize(usize_number) {
+                            Ok(converted_size) => {
+                                Ok((self.rows[converted_size].squares[usize_letter]).clone())
+                            },
+                            Err(error_text) => {
+                                Err(error_text)
+                            }
+                        }
                     },
                     Err(letter_text) => Err(letter_text) 
                 }
@@ -553,7 +588,12 @@ impl Board {
             Ok(usize_number) => {
                 match board_safe_isize_converter(coords.letter.eval()) {
                     Ok(usize_letter) => {
-                        self.rows[Self::convert_row_usize(usize_number)].squares[usize_letter] = square;
+                        match Self::convert_row_usize(usize_number) {
+                            Ok(converted_rowsize) => {
+                                self.rows[converted_rowsize].squares[usize_letter] = square;
+                            },
+                            Err(text) => {}
+                        }
                     },
                     Err(letter_text) => ()
                 }
