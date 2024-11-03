@@ -10,6 +10,9 @@ fn main() {
     println!("This is a board\n{}", default_board);
     let king_coords= Coordinates{ letter: ColumnLetter::E, number: 1};
     default_board.show_me_legal_squares(&king_coords); 
+    let knight_coords = Coordinates{ letter: ColumnLetter::B, number: 1};
+    println!("lets take a look at knight squares");
+    default_board.show_me_legal_squares(&knight_coords);
     let coord_a= Coordinates{letter: ColumnLetter::C, number: 2};
     let coord_b = Coordinates{letter: ColumnLetter::C, number: 3};
     let coord_c= Coordinates{letter: ColumnLetter::A, number: 7};
@@ -21,5 +24,7 @@ fn main() {
     default_board.move_piece(&coord_e, &coord_f);
     println!("this is the board\n{}", default_board);
     default_board.show_me_legal_squares(&king_coords);
+    println!("the new target squares for knight");
+    default_board.show_me_legal_squares(&knight_coords);
 
 }

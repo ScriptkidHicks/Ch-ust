@@ -255,12 +255,8 @@ impl Square {
         for i in 1..9 {
             match ColumnLetter::construct_letter_from_isize(i) {
                 Ok(found_letter) => {
-                    let column_target = Coordinates{letter: found_letter, number: coordinates.number};
-                    let row_target=  Coordinates{ letter: coordinates.letter.clone(), number: i};
-                    let (column_move_legal, _, _, _, _, _) = parse_move_legality(piece_kind, &coordinates, &column_target, &board);
-                    let (row_move_legal, _, _, _, _, _) = parse_move_legality(piece_kind, &coordinates, &row_target, &board);
-                    if column_move_legal {legal_target_squares.push(column_target);}
-                    if row_move_legal {legal_target_squares.push(row_target);}
+                    self.get_legal_single_target(coordinates, found_letter, coordinates.number, piece_kind, board, legal_target_squares);
+                    self.get_legal_single_target(coordinates, coordinates.letter, i, piece_kind, board, legal_target_squares);
                 },
                 Err(text) => {
                     panic!("{}", text);
@@ -277,11 +273,7 @@ impl Square {
             match ColumnLetter::construct_letter_from_isize(moving_letter_value) {
                 Ok(found_letter) => {
                      DiagonalDirection::modify_letter_and_number_values(&direction, &mut moving_letter_value, &mut moving_number_value);
-                    let target_coords = Coordinates{letter: found_letter, number: moving_number_value};
-                    let (target_legal, _, _, _, _, _) = parse_move_legality(piece_kind, coordinates, &target_coords, board);
-                    if target_legal {
-                        legal_target_squares.push(target_coords);
-                    }
+                     self.get_legal_single_target(coordinates, found_letter, moving_number_value, piece_kind, board, legal_target_squares);
                 },
                 Err(_) => {
                     break;
@@ -298,6 +290,14 @@ impl Square {
         self.get_legal_single_diagonal(coordinates, DiagonalDirection::UpLeft, piece_kind, board, legal_target_squares);
 
         self.get_legal_single_diagonal(coordinates, DiagonalDirection::DownLeft, piece_kind, board, legal_target_squares);
+    }
+
+    pub fn get_legal_single_target(&self, from: &Coordinates, col_letter: ColumnLetter, row_number: isize, piece_kind: PieceKind, board: &Board, legal_target_squares: &mut Vec<Coordinates>) {
+        let investigating_coordinates = Coordinates{letter: col_letter, number: row_number};
+        let (move_legal, _, _, _, _, _) = parse_move_legality(piece_kind, from, &investigating_coordinates, board);
+        if move_legal {
+            legal_target_squares.push(investigating_coordinates);
+        }
     }
 
     pub fn get_legal_targets(&self, coordinates: &Coordinates, board: &Board) -> Vec<Coordinates> {
@@ -321,7 +321,25 @@ impl Square {
                         self.get_legal_cross_targets(coordinates, piece.kind, board, &mut legal_target_squares);
                     },
                     PieceKind::Knight => {
-                        
+                        let row_alters: Vec<(isize, isize)> = vec![(-2, -1), (-2, 1), (2, -1), (2, 1)];
+                        for (alter_a, alter_b) in row_alters {
+                            match ColumnLetter::construct_letter_from_isize(coordinates.letter.eval() + alter_a) {
+                                Ok(new_letter) => {
+                                    self.get_legal_single_target(coordinates, new_letter, coordinates.number + alter_b, piece.kind, board, &mut legal_target_squares);
+                                },
+                                Err(_) => {
+                                    //oops, out of bounds
+                                }
+                            }
+                            match ColumnLetter::construct_letter_from_isize(coordinates.letter.eval() + alter_b) {
+                                Ok(new_letter) => {
+                                    self.get_legal_single_target(coordinates, new_letter, coordinates.number + alter_a, piece.kind, board, &mut legal_target_squares);
+                                },
+                                Err(_) => {
+                                    //oops, out of bounds
+                                }
+                            }
+                        }
                     },
                     PieceKind::Bishop => {
                         self.get_legal_diagonal_targets(coordinates, piece.kind, board, &mut legal_target_squares);
@@ -336,11 +354,7 @@ impl Square {
                                 match ColumnLetter::construct_letter_from_isize(coordinates.letter.eval() + col_mod) {
                                     Ok(new_letter) => {
                                         //ok, we have a new valid column, So lets go check if we can get that square.
-                                        let investigating_coordinates = Coordinates{letter: new_letter, number: coordinates.number + row_mod};
-                                        let (move_legal, _, _, _, _, _) = parse_move_legality(piece.kind, coordinates, &investigating_coordinates, board);
-                                        if move_legal {
-                                            legal_target_squares.push(investigating_coordinates);
-                                        }
+                                        self.get_legal_single_target(coordinates, new_letter, coordinates.number + row_mod, piece.kind, board, &mut legal_target_squares);
                                     },
                                     Err(_) => {
                                         //That's ok, it's just out of bounds
@@ -555,7 +569,7 @@ impl Board {
     }
     
     fn convert_row_usize(size: usize) -> Result<usize, &'static str> {
-        if (size > 0 && size < 9){
+        if size > 0 && size < 9 {
             Ok(7 - (size - 1))
         } else {
             Err("attempted to perform subtraction out of bounds of usize")
@@ -592,10 +606,10 @@ impl Board {
                             Ok(converted_rowsize) => {
                                 self.rows[converted_rowsize].squares[usize_letter] = square;
                             },
-                            Err(text) => {}
+                            Err(_) => {}
                         }
                     },
-                    Err(letter_text) => ()
+                    Err(_) => ()
                 }
             },
             Err(_) => ()
