@@ -26,5 +26,7 @@ fn main() {
     default_board.show_me_legal_squares(&king_coords);
     println!("the new target squares for knight");
     default_board.show_me_legal_squares(&knight_coords);
+    println!("after");
+    default_board.show_me_legal_squares(&Coordinates{letter: ColumnLetter::B, number: 2});
 
 }

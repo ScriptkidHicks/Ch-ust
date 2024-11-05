@@ -139,18 +139,20 @@ pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates
                                                         PieceColor::White => if move_information.move_direction == MoveDirection::Up {successful = true;},
                                                     }
                                                 } else if move_information.distance == 2 {
-                                                    match from_piece.color {
-                                                    PieceColor::Black => {
-                                                        if from.number == 7 {
-                                                            successful = true;
-                                                        }
-                                                    },
-                                                    PieceColor::White => {
-                                                        if from.number == 2 {
-                                                            successful = true;
+                                                    if (move_information.move_direction == MoveDirection::Up || move_information.move_direction == MoveDirection::Down) {
+                                                            match from_piece.color {
+                                                            PieceColor::Black => {
+                                                                if from.number == 7 {
+                                                                    successful = true;
+                                                                }
+                                                            },
+                                                            PieceColor::White => {
+                                                                if from.number == 2 {
+                                                                    successful = true;
+                                                                }
+                                                            }
                                                         }
                                                     }
-                                                }
                                             }
                                         };
                                     },

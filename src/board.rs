@@ -309,13 +309,37 @@ impl Square {
             Square::Full(piece) => {
                 match piece.kind {
                     PieceKind::Pawn => {
+                        let single_step: isize;
+                        let double_step: isize;
                         match piece.color {
                             PieceColor::Black => {
-                                
+                                single_step = -1;
+                                double_step = -2;
                             },
                             PieceColor::White => {
+                                single_step = 1;
+                                double_step = -2;
                             }
                         };
+
+                        //regular step forward
+                        self.get_legal_single_target(coordinates, coordinates.letter, coordinates.number + single_step, piece.kind, board, &mut legal_target_squares);
+
+                        //double jump. We can let parsing handle the legality.
+                        self.get_legal_single_target(coordinates, coordinates.letter, coordinates.number + double_step, piece.kind, board, &mut legal_target_squares);
+
+                        //now lets try the two attack vectors
+                        let attack_vectors: Vec<isize> = vec![-1, 1];
+                        for vector in attack_vectors {
+                            match ColumnLetter::construct_letter_from_isize(coordinates.letter.eval() + vector) {
+                                Ok(new_letter) => {
+                                    self.get_legal_single_target(coordinates, new_letter, coordinates.number + single_step, piece.kind, board, &mut legal_target_squares);
+                                },
+                                Err(_) => {
+                                    //this is fine. It's just on the edge
+                                }
+                            }
+                        }
                     },
                     PieceKind::Rook => {
                         self.get_legal_cross_targets(coordinates, piece.kind, board, &mut legal_target_squares);
@@ -333,6 +357,7 @@ impl Square {
                             }
                             match ColumnLetter::construct_letter_from_isize(coordinates.letter.eval() + alter_b) {
                                 Ok(new_letter) => {
+                                    println!("knight going from {} to {}{}", coordinates, new_letter,coordinates.number + alter_b );
                                     self.get_legal_single_target(coordinates, new_letter, coordinates.number + alter_a, piece.kind, board, &mut legal_target_squares);
                                 },
                                 Err(_) => {
