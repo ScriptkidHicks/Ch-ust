@@ -8,51 +8,9 @@ pub enum Mate_State {
     Safe
 }
 
-fn legal_move_available_from_this_square(square: &Square, turn_color: PieceColor, chess_board: &Board) -> bool {
-    match square {
-        Square::Empty => {
-            false
-        }, 
-        Square::Full(piece) => {
-            if piece.color == turn_color {
-                match piece.kind {
-                    PieceKind::Pawn => {
-                        match piece.color {
-                            PieceColor::Black => {
-
-                            },
-                            PieceColor::White => {
-                                
-                            }
-                        }
-                        true
-                    },
-                    PieceKind::Rook => {
-                        true
-                    },
-                    PieceKind::Knight => {
-                        true
-                    },
-                    PieceKind::Bishop => {
-                        true
-                    }, 
-                    PieceKind::King => {
-                        true
-                    },
-                    PieceKind::Queen => {
-                        true
-                    }
-                }
-            } else {
-                false
-            }
-        }
-    }
-}
-
 pub fn king_checkmate_state(king_color: PieceColor, chess_board: &Board) -> Mate_State {
     let king_currently_in_danger = chess_board.is_king_in_danger(king_color);
-    let legal_move_available = chess_board.search_squares(king_color, legal_move_available_from_this_square);
+    let legal_move_available = chess_board.legal_move_available(king_color);
 
     match (king_currently_in_danger, legal_move_available) {
         (true, true) => {
@@ -90,7 +48,7 @@ pub fn would_king_be_in_danger(board: Board, from: &Coordinates, to: &Coordinate
     }        
 }
 
-pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates, chess_board: &Board) -> (bool, bool, PieceColor, PieceKind, MoveDirection, isize) {
+pub fn parse_move_legality(from: &Coordinates, to: &Coordinates, chess_board: &Board) -> (bool, bool, PieceColor, PieceKind, MoveDirection, isize) {
     let opt_from_square = chess_board.retreive_square(&from);
     let opt_to_square = chess_board.retreive_square(&to);
     let move_information: SquareToSquareInformation = measure_distance(from, to);
@@ -123,7 +81,7 @@ pub fn parse_move_legality(kind: PieceKind, from: &Coordinates, to: &Coordinates
                                 };
 
                                 if color_legal {
-                                    match kind {
+                                    match from_piece.kind {
                                         PieceKind::Pawn => {
                                             if taking_piece {
                                                 match from_piece.color {
