@@ -1,7 +1,7 @@
 use core::fmt;
-use std::slice::Iter;
+use std::{fmt::format, slice::Iter, thread, time};
 
-use crate::{pieces::*, rules::{king_checkmate_state, parse_move_legality, Mate_State}};
+use crate::{base_tools::alienify_output_text, pieces::*, rules::{king_checkmate_state, parse_move_legality, Mate_State}};
 
 pub fn isize_difference(a: isize, b: isize) -> isize {
     isize::abs(a - b)
@@ -1121,9 +1121,10 @@ impl fmt::Display for Board {
         println!("");
         let mut i = 8;
         for row in self.rows.iter() {
-            print!("[{} ]", i);
+            println!("[{} ]{}", i, row);
             i -= 1;
-            print!("{}\n", row);
+            let sleep_time = time::Duration::from_millis(250);
+            thread::sleep(sleep_time);
         }
         print!("    ");
         for letter in ColumnLetter::iterator() {
