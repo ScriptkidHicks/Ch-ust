@@ -20,18 +20,28 @@ pub fn parse_square(input_string: &str) -> Result<Coordinates, &'static str> {
     let col: ColumnLetter;
     let row: isize;
     if input_string.len() != 2 {
+        println!("incorrect length");
+        println!("what size is it: {}", input_string.len());
         Err("incorrect length")
     } else {
         match ColumnLetter::convert_to(input_string.chars().nth(0).unwrap()) {
             Ok(col_letter) => {col = col_letter},
-            Err(col_error) => return Err(col_error)
+            Err(col_error) =>{
+                    println!("couldn't convert column letter: {}", input_string.chars().nth(0).unwrap());
+                 return Err(col_error)}
         }
 
         match parse_char_to_int(input_string.chars().nth(1).unwrap()) {
             Ok(row_number) => row = row_number,
-            Err(row_error) => return Err(row_error)
+            Err(row_error) => {
+                println!("couldn't parse int: {}", input_string.chars().nth(1).unwrap());
+                return Err(row_error)}
         }
 
+        println!("returning: {}", Coordinates {
+            letter: col,
+            number: row
+        } );
         Ok(Coordinates {
             letter: col,
             number: row

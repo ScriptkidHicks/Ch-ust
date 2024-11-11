@@ -252,7 +252,7 @@ pub enum Square {
 
 impl Square {
     pub fn get_legal_cross_targets(&self, coordinates: &Coordinates, board: &Board, legal_target_squares: &mut Vec<Coordinates>) {
-        for i in 1..9 {
+        for i in 0..8 {
             match ColumnLetter::construct_letter_from_isize(i) {
                 Ok(found_letter) => {
                     self.get_legal_single_target(coordinates, found_letter, coordinates.number, board, legal_target_squares);
@@ -342,6 +342,7 @@ impl Square {
                         }
                     },
                     PieceKind::Rook => {
+                        println!("do you think this is a rook?");
                         self.get_legal_cross_targets(coordinates, board, &mut legal_target_squares);
                     },
                     PieceKind::Knight => {
@@ -370,6 +371,7 @@ impl Square {
                         self.get_legal_diagonal_targets(coordinates, board, &mut legal_target_squares);
                     },
                     PieceKind::Queen => {
+                        println!("this is for sure not a queen");
                         self.get_legal_cross_targets(coordinates, board, &mut legal_target_squares);
                         self.get_legal_diagonal_targets(coordinates, board, &mut legal_target_squares);
                     },
@@ -396,6 +398,7 @@ impl Square {
     }
 
     pub fn show_me_legal_squares(&self, coordinates: &Coordinates, board: &Board) {
+        println!("from show me legal squares???");
         let legal_squares = self.get_legal_targets(coordinates, board);
         for target in legal_squares {
             print!("{} ", target);
@@ -588,6 +591,7 @@ impl Board {
         for coordinate in Self::board_coords() {
             match self.retreive_square(&coordinate) {
                 Ok(square) => {
+                    println!("from legal move available");
                     if !square.get_legal_targets(&coordinate, self).is_empty() {
                         // if it's not empty we know that there are legal targets that would not put the king in danger, so we can break early. We only need one legal move to be available
                         legal_move_available = true;
@@ -1123,7 +1127,7 @@ impl fmt::Display for Board {
         for row in self.rows.iter() {
             println!("[{} ]{}", i, row);
             i -= 1;
-            let sleep_time = time::Duration::from_millis(250);
+            let sleep_time = time::Duration::from_millis(150);
             thread::sleep(sleep_time);
         }
         print!("    ");
