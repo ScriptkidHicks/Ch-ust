@@ -1,7 +1,7 @@
 use core::fmt;
 use std::fmt::write;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum PieceColor {
     White,
     Black
@@ -17,7 +17,7 @@ impl fmt::Display for PieceColor {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum PieceKind {
     Pawn,
     Rook,
@@ -53,7 +53,7 @@ impl PieceKind {
     }
 }
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub struct Piece {
     pub color: PieceColor,
     pub kind: PieceKind

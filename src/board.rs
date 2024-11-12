@@ -244,7 +244,7 @@ impl DiagonalDirection {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Square {
     Empty,
     Full(Piece)
@@ -398,7 +398,6 @@ impl Square {
     }
 
     pub fn show_me_legal_squares(&self, coordinates: &Coordinates, board: &Board) {
-        println!("from show me legal squares???");
         let legal_squares = self.get_legal_targets(coordinates, board);
         for target in legal_squares {
             print!("{} ", target);
@@ -416,7 +415,7 @@ impl fmt::Display for Square {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Row {
     squares: [Square; 8]
 }
@@ -434,6 +433,12 @@ impl Row {
     pub fn default() -> Self {
         Row {
             squares: [Square::Empty; 8]
+        }
+    }
+
+    pub fn new(input_squares: [Square; 8]) -> Row {
+        Row {
+            squares: input_squares
         }
     }
 

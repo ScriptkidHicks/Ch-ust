@@ -37,11 +37,6 @@ pub fn parse_square(input_string: &str) -> Result<Coordinates, &'static str> {
                 println!("couldn't parse int: {}", input_string.chars().nth(1).unwrap());
                 return Err(row_error)}
         }
-
-        println!("returning: {}", Coordinates {
-            letter: col,
-            number: row
-        } );
         Ok(Coordinates {
             letter: col,
             number: row

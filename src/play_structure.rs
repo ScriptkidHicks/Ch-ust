@@ -121,10 +121,8 @@ pub fn run_chess_interface() {
 
     while should_keep_running {
         alienify_output_text("Please enter a selection:");
-        alienify_output_text("1: Run Unit Tests");
-        alienify_output_text("2: Play Chess");
-        alienify_output_text("3: Run Current Test");
-        alienify_output_text("4: Exit");
+        alienify_output_text("1: Play Chess");
+        alienify_output_text("2: Exit");
 
         let mut indication = String::new();
 
@@ -139,15 +137,9 @@ pub fn run_chess_interface() {
 
         match indication_number {
             1 => {
-                run_all_unit_tests();
-            },
-            2 => {
                 play_chess();
             },
-            3 => {
-                run_current_test();
-            },
-            4 => {
+            2 => {
                 should_keep_running = false;
             },
             _ => {
