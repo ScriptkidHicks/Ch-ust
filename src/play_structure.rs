@@ -1,7 +1,7 @@
 
-use std::{io::stdin, ops::Index};
+use std::io::stdin;
 
-use crate::{base_tools::alienify_output_text, board::{self, *}, interface::parse_square, pieces::PieceColor, unit_tests::*};
+use crate::{base_tools::alienify_output_text, board::*, interface::parse_square, pieces::PieceColor};
 
 fn play_chess() {
     let white_turn_string = "WHITE TO MOVE";
@@ -17,7 +17,8 @@ fn play_chess() {
         alienify_output_text("Please enter a selection:");
         alienify_output_text("1: move");
         alienify_output_text("2: show legal moves from square");
-        alienify_output_text("3: surrender");
+        alienify_output_text("3: show previous turns");
+        alienify_output_text("4: surrender");
 
         let mut indication = String::new();
 
@@ -38,6 +39,9 @@ fn play_chess() {
                 query_legal_squares(&current_board);
             },
             3 => {
+                //handle previous turn display
+            }
+            4 => {
                 game_not_over = false;
             },
             _ => { alienify_output_text("Hey friend, I think you entered an invalid number")}
@@ -76,7 +80,7 @@ pub fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Boa
                                     break;
                                 },
                                 MoveResult::WrongTurn => {
-                                    println!("Oops! It looks like you tried to move the wrong piece. It's {}'s turn", current_board.get_turn());
+                                    println!("Oops! It looks like you tried to move the wrong piece. It's {}'s turn", current_board.get_turn_full());
                                 },
                                 result => {
                                     println!("{}", result);

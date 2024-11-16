@@ -140,6 +140,12 @@ pub struct Coordinates {
     pub number: isize
 }
 
+impl Coordinates {
+    pub fn new(input_letter: ColumnLetter, input_row: isize) -> Coordinates {
+        Coordinates {letter: input_letter, number: input_row}
+    }
+}
+
 impl fmt::Display for Coordinates {
     fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
         print!("{}{}", self.letter, self.number);
@@ -489,11 +495,15 @@ impl Row {
             ]
         }
     }
+
+    pub fn set_square(&mut self, index: usize, square: Square) {
+        self.squares[index] = square;
+    }
 }
 
 
-#[derive(Clone)]
-struct SideInformation {
+#[derive(Clone, PartialEq)]
+pub struct SideInformation {
     taken_pieces: Vec<PieceKind>,
     can_castle_kingside: bool,
     can_castle_queenside: bool,
@@ -541,7 +551,7 @@ impl SideInformation {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum MoveResult {
     CompletedSafely,
     BlackKingCheckmated,
@@ -560,7 +570,7 @@ impl fmt::Display for MoveResult {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Board {
     rows: [Row; 8],
     turn: PieceColor,
@@ -587,8 +597,24 @@ impl Board {
         }
     }
 
+    pub fn new (input_rows: [Row; 8], current_turn: PieceColor, input_white_side: SideInformation, input_black_side: SideInformation) -> Board {
+        Board {
+            rows: input_rows,
+            turn: current_turn,
+            white_side_information: input_white_side,
+            black_side_information: input_black_side
+        }
+    }
+
     pub fn get_turn(&self) -> PieceColor {
         self.turn
+    }
+
+    pub fn get_turn_full(&self) -> &'static str {
+        match self.turn {
+            PieceColor::White => {"white"},
+            PieceColor::Black => {"black"}
+        }
     }
 
     pub fn board_coords() -> Vec<Coordinates> {
@@ -1006,6 +1032,21 @@ impl Board {
                 panic!("attempted to castle, but could not retreive king")
             }
         }
+    }
+
+    pub fn en_passant_legal(&self, moved_pawn_color: PieceColor, from: &Coordinates, to: &Coordinates, previous_turn: Board) -> bool {
+        //if we're here we can safely assume that the move they're trying to do is en passant.
+        let mut move_legal = false;
+        match moved_pawn_color {
+            PieceColor::Black => {
+
+            },
+            PieceColor::White => {
+
+            }
+        }
+
+        move_legal
     }
 
     pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) -> MoveResult {
