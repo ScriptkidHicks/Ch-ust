@@ -541,6 +541,7 @@ impl SideInformation {
     }
 }
 
+#[derive(Debug)]
 pub enum MoveResult {
     CompletedSafely,
     BlackKingCheckmated,
@@ -551,6 +552,12 @@ pub enum MoveResult {
     WrongTurn,
     MoveIllegal,
     EmptySquare
+}
+
+impl fmt::Display for MoveResult {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 #[derive(Clone)]
@@ -578,6 +585,10 @@ impl Board {
             white_side_information: SideInformation::default(PieceColor::White),
             black_side_information: SideInformation::default(PieceColor::Black)
         }
+    }
+
+    pub fn get_turn(&self) -> PieceColor {
+        self.turn
     }
 
     pub fn board_coords() -> Vec<Coordinates> {

@@ -1,14 +1,16 @@
 
 use std::{io::stdin, ops::Index};
 
-use crate::{board::{self, *}, unit_tests::*, base_tools::alienify_output_text, interface::parse_square};
+use crate::{base_tools::alienify_output_text, board::{self, *}, interface::parse_square, pieces::PieceColor, unit_tests::*};
 
 fn play_chess() {
-    let mut turn_string = "WHITE TO MOVE";
+    let white_turn_string = "WHITE TO MOVE";
+    let black_turn_string = "BLACK TO MOVE";
     let mut game_not_over = true;
     let mut current_board = Board::default();
     let mut board_states: Vec<Board> = Vec::new();
     while game_not_over {
+        let turn_string = if current_board.get_turn() == PieceColor::White {white_turn_string} else {black_turn_string};
         println!("{}", turn_string);
         print!("{}", current_board);
 
@@ -73,7 +75,12 @@ pub fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Boa
                                     board_states.push(previous_turn_board);
                                     break;
                                 },
-                                _ => {break;}
+                                MoveResult::WrongTurn => {
+                                    println!("Oops! It looks like you tried to move the wrong piece. It's {}'s turn", current_board.get_turn());
+                                },
+                                result => {
+                                    println!("{}", result);
+                                    break;}
                             }
                         },
                         Err(_) => {
