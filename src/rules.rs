@@ -119,7 +119,7 @@ pub fn en_passant_legal(
     move_legal
 }
 
-pub fn parse_move_legality(from: &Coordinates, to: &Coordinates, chess_board: &Board, opt_previous_turn_board: Option<&Board>) -> (bool, bool, PieceColor, PieceKind, MoveDirection, isize) {
+pub fn parse_move_legality(from: &Coordinates, to: &Coordinates, chess_board: &Board, opt_previous_turn_board: Option<&Board>) -> (bool, bool, PieceColor, PieceKind, MoveDirection, isize, Option<Coordinates>) {
     let opt_from_square = chess_board.retreive_square(&from);
     let opt_to_square = chess_board.retreive_square(&to);
     let move_information: SquareToSquareInformation = measure_distance(from, to);
@@ -128,6 +128,7 @@ pub fn parse_move_legality(from: &Coordinates, to: &Coordinates, chess_board: &B
     let mut target_square_piece_kind: PieceKind = PieceKind::Pawn;
     let mut taking_piece = false;
     let mut color_legal = false;
+    let mut opt_passant_removal = None;
 
     //we can skip a lot of work by just checking that from and to are valid locations
     match opt_from_square {
@@ -182,7 +183,13 @@ pub fn parse_move_legality(from: &Coordinates, to: &Coordinates, chess_board: &B
                                                         MoveDirection::DownLeft | MoveDirection::DownRight | MoveDirection::UpLeft | MoveDirection::UpRight => {
                                                             match opt_previous_turn_board {
                                                                 Some(previous_board) => {
-                                                                    successful = en_passant_legal(from_piece.color.get_inverse_color(), from, to, previous_board, chess_board)
+                                                                    successful = en_passant_legal(from_piece.color.get_inverse_color(), from, to, previous_board, chess_board);
+                                                                    if successful {
+                                                                        taking_piece = true;
+                                                                        target_square_piece_color = from_piece.color.get_inverse_color();
+                                                                        target_square_piece_kind = PieceKind::Pawn;
+                                                                        opt_passant_removal = Some(Coordinates {letter: to.letter, number: from.number});
+                                                                    }
                                                                 },
                                                                 None => {}
                                                             }
@@ -260,5 +267,5 @@ pub fn parse_move_legality(from: &Coordinates, to: &Coordinates, chess_board: &B
 
     
 
-    (successful, taking_piece, target_square_piece_color, target_square_piece_kind, move_information.move_direction, move_information.distance)
+    (successful, taking_piece, target_square_piece_color, target_square_piece_kind, move_information.move_direction, move_information.distance, opt_passant_removal)
 }

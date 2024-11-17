@@ -20,8 +20,6 @@ pub fn parse_square(input_string: &str) -> Result<Coordinates, &'static str> {
     let col: ColumnLetter;
     let row: isize;
     if input_string.len() != 2 {
-        println!("incorrect length");
-        println!("what size is it: {}", input_string.len());
         Err("incorrect length")
     } else {
         match ColumnLetter::convert_to(input_string.chars().nth(0).unwrap()) {
