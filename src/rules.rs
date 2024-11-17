@@ -8,9 +8,9 @@ pub enum Mate_State {
     Safe
 }
 
-pub fn king_checkmate_state(king_color: PieceColor, chess_board: &Board) -> Mate_State {
+pub fn king_checkmate_state(king_color: PieceColor, chess_board: &Board, opt_previous_turn_board: Option<&Board>) -> Mate_State {
     let king_currently_in_danger = chess_board.is_king_in_danger(king_color);
-    let legal_move_available = chess_board.legal_move_available(king_color);
+    let legal_move_available = chess_board.legal_move_available(king_color, opt_previous_turn_board);
 
     match (king_currently_in_danger, legal_move_available) {
         (true, true) => {
@@ -119,7 +119,7 @@ pub fn en_passant_legal(
     move_legal
 }
 
-pub fn parse_move_legality(from: &Coordinates, to: &Coordinates, chess_board: &Board) -> (bool, bool, PieceColor, PieceKind, MoveDirection, isize) {
+pub fn parse_move_legality(from: &Coordinates, to: &Coordinates, chess_board: &Board, opt_previous_turn_board: Option<&Board>) -> (bool, bool, PieceColor, PieceKind, MoveDirection, isize) {
     let opt_from_square = chess_board.retreive_square(&from);
     let opt_to_square = chess_board.retreive_square(&to);
     let move_information: SquareToSquareInformation = measure_distance(from, to);
@@ -180,7 +180,12 @@ pub fn parse_move_legality(from: &Coordinates, to: &Coordinates, chess_board: &B
                                                             }
                                                         },
                                                         MoveDirection::DownLeft | MoveDirection::DownRight | MoveDirection::UpLeft | MoveDirection::UpRight => {
-                                                            //successful = en_passant_legal(target_pawn_color, from, to, previous_turn_board, current_turn_board)
+                                                            match opt_previous_turn_board {
+                                                                Some(previous_board) => {
+                                                                    successful = en_passant_legal(from_piece.color.get_inverse_color(), from, to, previous_board, chess_board)
+                                                                },
+                                                                None => {}
+                                                            }
                                                         },
                                                         _ => {}
                                                     }

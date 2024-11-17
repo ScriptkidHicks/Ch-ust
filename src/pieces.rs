@@ -7,6 +7,15 @@ pub enum PieceColor {
     Black
 }
 
+impl PieceColor {
+    pub fn get_inverse_color(&self) -> PieceColor {
+        match self {
+            PieceColor::Black => PieceColor::White,
+            PieceColor::White => PieceColor::Black
+        }
+    }
+}
+
 
 impl fmt::Display for PieceColor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

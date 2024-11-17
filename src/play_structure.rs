@@ -36,7 +36,7 @@ fn play_chess() {
                 move_piece_on_board(&mut current_board, &mut board_states);
             },
             2 => {
-                query_legal_squares(&current_board);
+                query_legal_squares(&current_board, board_states.last());
             },
             3 => {
                 //handle previous turn display
@@ -79,13 +79,12 @@ pub fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Boa
         if indication.len() != 7 {
             println!("That input format appears to be incorrect.")
         } else {
-            println!("first coord: {}", &indication[0..2]);
-            println!("second coord: {}", &indication[3..5]);
             match parse_square(&indication[0..2]) {
                 Ok(from) => {
                     match parse_square(&indication[3..5]) {
                         Ok(to) => {
-                            match current_board.move_piece(&from, &to) {
+                            let previous_board = board_states.last();
+                            match current_board.move_piece(&from, &to, previous_board) {
                                 MoveResult::CompletedSafely => {
                                     board_states.push(previous_turn_board);
                                     break;
@@ -111,7 +110,7 @@ pub fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Boa
     
 }
 
-pub fn query_legal_squares(current_board: &Board) {
+pub fn query_legal_squares(current_board: &Board, opt_previous_turn_board: Option<&Board>) {
     loop {
         println!("Please enter coordinates, or X to quit:");
     
@@ -128,7 +127,7 @@ pub fn query_legal_squares(current_board: &Board) {
         match parse_square(&indication[0..2]) {
             Ok(coordinates) => {
                 print!("Legal Moves: ");
-                current_board.show_me_legal_squares(&coordinates);
+                current_board.show_me_legal_squares(&coordinates, opt_previous_turn_board);
                 break;
             },
             Err(_) => {
