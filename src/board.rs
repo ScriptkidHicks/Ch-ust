@@ -1,7 +1,7 @@
 use core::fmt;
-use std::{fmt::format, slice::Iter, thread, time};
+use std::{slice::Iter, thread, time};
 
-use crate::{base_tools::alienify_output_text, pieces::*, rules::{king_checkmate_state, parse_move_legality, Mate_State}};
+use crate::{pieces::*, rules::{king_checkmate_state, parse_move_legality, Mate_State}};
 
 pub fn isize_difference(a: isize, b: isize) -> isize {
     isize::abs(a - b)
@@ -1032,21 +1032,6 @@ impl Board {
                 panic!("attempted to castle, but could not retreive king")
             }
         }
-    }
-
-    pub fn en_passant_legal(&self, moved_pawn_color: PieceColor, from: &Coordinates, to: &Coordinates, previous_turn: Board) -> bool {
-        //if we're here we can safely assume that the move they're trying to do is en passant.
-        let mut move_legal = false;
-        match moved_pawn_color {
-            PieceColor::Black => {
-
-            },
-            PieceColor::White => {
-
-            }
-        }
-
-        move_legal
     }
 
     pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) -> MoveResult {

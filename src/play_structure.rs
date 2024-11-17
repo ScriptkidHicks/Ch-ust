@@ -17,7 +17,7 @@ fn play_chess() {
         alienify_output_text("Please enter a selection:");
         alienify_output_text("1: move");
         alienify_output_text("2: show legal moves from square");
-        alienify_output_text("3: show previous turns");
+        alienify_output_text("3: show previous turn");
         alienify_output_text("4: surrender");
 
         let mut indication = String::new();
@@ -40,6 +40,17 @@ fn play_chess() {
             },
             3 => {
                 //handle previous turn display
+                //for now we're just showing you the previous turn.
+                if (board_states.len() > 0){
+                    match board_states.get(board_states.len() - 1) {
+                        Some(board_state) => {
+                            println!("previous board:\n{}", board_state)
+                        },
+                        None => {
+                            println!("oops! It looks like that turn doesn't exist")
+                        }
+                    }
+                }
             }
             4 => {
                 game_not_over = false;

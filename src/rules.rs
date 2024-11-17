@@ -48,6 +48,77 @@ pub fn would_king_be_in_danger(board: Board, from: &Coordinates, to: &Coordinate
     }        
 }
 
+pub fn square_meets_expectations(
+    board: &Board,
+    target_coords: &Coordinates,
+    should_be_empty: bool,
+    expected_piece_color: PieceColor,
+    expected_piece_kind: PieceKind
+) -> bool {
+    let mut meets_expectations = false;
+
+    match board.retreive_square(target_coords) {
+        Ok(square) => {
+            match square {
+                Square::Full(piece) => {
+                    meets_expectations = !should_be_empty && (piece.color == expected_piece_color) && (piece.kind == expected_piece_kind);
+                },
+                Square::Empty => {
+                    meets_expectations = should_be_empty;
+                }
+            }
+        },
+        Err(_) => {
+            panic!("Tried to retreive nonexistant square in square_meets_expectations")
+        }
+    }
+
+    meets_expectations
+}
+
+pub fn en_passant_legal( 
+    target_pawn_color: PieceColor, 
+    from: &Coordinates, 
+    to: &Coordinates, 
+    previous_turn_board: &Board,
+    current_turn_board: &Board) 
+    -> bool 
+{
+    //if we're here we can safely assume that the move they're trying to do is en passant.
+    let mut move_legal = false;
+    //lets triangulate the target square.
+    let current_turn_coords = Coordinates {letter: to.letter, number: from.number };
+    let previous_turn_coords = match target_pawn_color {
+        PieceColor::White => {
+            Coordinates {letter: to.letter, number: current_turn_coords.number - 2}
+        },
+        PieceColor::Black => {
+            Coordinates {letter: to.letter, number: current_turn_coords.number + 2}
+        }
+    };
+
+    //for this to be legal, 3 things must be true.
+    //1. there must be a pawn (of the opposite color) in the target square
+    //2. that square must have been empty the previous turn.
+    //3. that pawn must have moved from 2 squares away the previous turn; ie: the square should then have been empty,
+    //   and the square "above" it must have been empty. Since we legality check all other moves, there's no other way 
+    //   to get a pawn into that position
+
+    let current_target_square_as_expected = square_meets_expectations(current_turn_board, &current_turn_coords, false, target_pawn_color, PieceKind::Pawn);
+
+    if (current_target_square_as_expected) {
+        let current_left_square_as_expected = square_meets_expectations(current_turn_board, &previous_turn_coords, true, target_pawn_color, PieceKind::Pawn);
+        if (current_left_square_as_expected) {
+            let previous_turn_left_square_meets_expectations = square_meets_expectations(previous_turn_board, &previous_turn_coords, false, target_pawn_color, PieceKind::Pawn);
+            if (previous_turn_left_square_meets_expectations) {
+                move_legal = true;
+            }
+        }
+    }
+
+    move_legal
+}
+
 pub fn parse_move_legality(from: &Coordinates, to: &Coordinates, chess_board: &Board) -> (bool, bool, PieceColor, PieceKind, MoveDirection, isize) {
     let opt_from_square = chess_board.retreive_square(&from);
     let opt_to_square = chess_board.retreive_square(&to);
@@ -97,19 +168,21 @@ pub fn parse_move_legality(from: &Coordinates, to: &Coordinates, chess_board: &B
                                                         PieceColor::White => if move_information.move_direction == MoveDirection::Up {successful = true;},
                                                     }
                                                 } else if move_information.distance == 2 {
-                                                    if (move_information.move_direction == MoveDirection::Up || move_information.move_direction == MoveDirection::Down) {
+                                                    match move_information.move_direction {
+                                                        MoveDirection::Down | MoveDirection::Up => {
                                                             match from_piece.color {
-                                                            PieceColor::Black => {
-                                                                if from.number == 7 {
-                                                                    successful = true;
-                                                                }
-                                                            },
-                                                            PieceColor::White => {
-                                                                if from.number == 2 {
-                                                                    successful = true;
+                                                                PieceColor::Black => {
+                                                                    successful = from.number == 7;
+                                                                },
+                                                                PieceColor::White => {
+                                                                    successful = from.number == 2;
                                                                 }
                                                             }
-                                                        }
+                                                        },
+                                                        MoveDirection::DownLeft | MoveDirection::DownRight | MoveDirection::UpLeft | MoveDirection::UpRight => {
+                                                            //successful = en_passant_legal(target_pawn_color, from, to, previous_turn_board, current_turn_board)
+                                                        },
+                                                        _ => {}
                                                     }
                                             }
                                         };

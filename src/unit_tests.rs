@@ -147,3 +147,7 @@ pub fn test_wrong_side_turn() {
 
     assert_eq!(move_result, MoveResult::WrongTurn);
 }
+
+#[test]
+pub fn test_en_passant_should_pass() {
+}
