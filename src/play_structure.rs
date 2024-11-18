@@ -11,6 +11,7 @@ fn play_chess() {
     let mut board_states: Vec<Board> = Vec::new();
     while game_not_over {
         let turn_string = if current_board.get_turn() == PieceColor::White {white_turn_string} else {black_turn_string};
+        let not_first_turn = board_states.len() > 0;
         println!("{}", turn_string);
         print!("{}", current_board);
 
@@ -28,7 +29,10 @@ fn play_chess() {
 
         let indication_number: u32 = match indication.trim().parse() {
             Ok(num) => num,
-            Err(_) => continue
+            Err(_) => {
+                println!("It appears you entered something that wasn't a positive integer. Oops!");
+                continue;
+            }
         };
 
         match indication_number {
@@ -39,20 +43,14 @@ fn play_chess() {
                 query_legal_squares(&current_board, board_states.last());
             },
             3 => {
-                //handle previous turn display
-                //for now we're just showing you the previous turn.
-                if (board_states.len() > 0){
-                    match board_states.get(board_states.len() - 1) {
-                        Some(board_state) => {
-                            println!("previous board:\n{}", board_state)
-                        },
-                        None => {
-                            println!("oops! It looks like that turn doesn't exist")
-                        }
-                    }
+                if not_first_turn {
+                    show_previous_board_state(&board_states);
+                } else {
+                    println!("Oops! Looks like it's still the first turn.");
                 }
             }
             4 => {
+                println!("{} has surrendered.", current_board.get_turn_full());
                 game_not_over = false;
             },
             _ => { alienify_output_text("Hey friend, I think you entered an invalid number")}
@@ -60,9 +58,100 @@ fn play_chess() {
     }
 }
 
-pub fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Board>) {
+fn show_previous_board_state(previous_states: &Vec<Board>) {
+    let turn_text = format!("You are on turn {}", previous_states.len() - 1);
     loop {
-        println!("Please enter a move in the form: a3 b3. Otherwise enter X to exit.");
+        alienify_output_text(&turn_text);
+        alienify_output_text("Choose one of the following:");
+        alienify_output_text("1: Show previous turn");
+        alienify_output_text("2: Show turn N");
+        alienify_output_text("3: Exit" );
+
+        let mut indication = String::new();
+
+        stdin()
+            .read_line(&mut indication)
+            .expect("Failed to read line");
+
+        let indication_number: u32 = match indication.trim().parse() {
+            Ok(num) => num,
+            Err(_) => {
+                println!("It appears you entered something that wasn't a positive integer. Oops!");
+                continue;
+            }
+        };
+
+        match indication_number {
+            1 => {
+                match previous_states.last() {
+                    Some(previous_state) => {
+                        println!("Previous turn:\n{}", previous_state);
+                        break;
+                    },
+                    None => {
+                        panic!("Oops! Looks like there both is, and isn't a previous board state!");
+                    }
+                }
+            },
+            2 => {
+                show_specific_turn_state(previous_states);
+                break;
+            },
+            3 => {
+                break;
+            },
+            _ => {
+                println!("Oops! That wasn't one of the options.");
+            }
+        }
+    }
+}
+
+fn show_specific_turn_state(previous_states: &Vec<Board>) {
+    loop {
+        let turn_text = format!("You are on turn {}", previous_states.len() - 1);
+        alienify_output_text(&turn_text);
+        alienify_output_text("Please enter a turn to view, or X to exit: ");
+        let mut indication = String::new();
+        
+        stdin()
+            .read_line(&mut indication)
+            .expect("Failed to read line");
+
+
+        if indication.to_lowercase().chars().nth(0).unwrap() == 'x' {
+            break;
+        }
+
+        let indication_number: usize = match indication.trim().parse() {
+            Ok(num) => num,
+            Err(_) => {
+                alienify_output_text("It appears you entered something that wasn't a positive integer. Oops!");
+                continue;
+            }
+        };
+
+        if indication_number == 0 || indication_number > previous_states.len() {
+            alienify_output_text("Oops! Looks like you entered a number outside the range of previous turns!");
+            continue;
+        } 
+
+        match previous_states.get(indication_number - 1) {
+            Some(board_state) => {
+                let formatted_turn_output = format!("On turn {} the state of the game was:\n{}", indication_number, board_state);
+                alienify_output_text(&formatted_turn_output);
+            },
+            None => {
+                alienify_output_text("Somehow you access an in-range, but non existant board!");
+            }
+        }
+
+    }
+}
+
+fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Board>) {
+    loop {
+        alienify_output_text("Please enter a move in the form: a3 b3. Otherwise enter X to exit.");
     
         let mut indication = String::new();
         let previous_turn_board = current_board.clone();
@@ -77,7 +166,7 @@ pub fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Boa
         }
 
         if indication.len() != 7 {
-            println!("That input format appears to be incorrect.")
+            alienify_output_text("That input format appears to be incorrect.")
         } else {
             match parse_square(&indication[0..2]) {
                 Ok(from) => {
@@ -126,7 +215,7 @@ pub fn query_legal_squares(current_board: &Board, opt_previous_turn_board: Optio
     
         match parse_square(&indication[0..2]) {
             Ok(coordinates) => {
-                print!("Legal Moves: ");
+                alienify_output_text("Legal Moves: ");
                 current_board.show_me_legal_squares(&coordinates, opt_previous_turn_board);
                 break;
             },
@@ -153,7 +242,9 @@ pub fn run_chess_interface() {
 
         let indication_number: u32 = match indication.trim().parse() {
             Ok(num) => num,
-            Err(_) => continue
+            Err(_) => {
+                println!("It appears you entered something that wasn't a positive integer. Oops!");
+                continue}
         };
 
         match indication_number {
@@ -161,6 +252,7 @@ pub fn run_chess_interface() {
                 play_chess();
             },
             2 => {
+                println!("Goodbye!");
                 should_keep_running = false;
             },
             _ => {
