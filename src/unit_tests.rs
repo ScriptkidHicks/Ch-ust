@@ -1,5 +1,3 @@
-use std::{default, str};
-
 use crate::{board::{Board, ColumnLetter, Coordinates, MoveResult, Row, SideInformation, Square}, pieces::{Piece, PieceColor, PieceKind}};
 
 #[test]

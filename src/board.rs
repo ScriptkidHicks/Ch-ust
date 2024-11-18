@@ -1,7 +1,7 @@
 use core::fmt;
 use std::{slice::Iter, thread, time};
 
-use crate::{pieces::*, rules::{king_checkmate_state, parse_move_legality, Mate_State}};
+use crate::{pieces::*, rules::{king_checkmate_state, parse_move_legality, MateState}};
 
 pub fn isize_difference(a: isize, b: isize) -> isize {
     isize::abs(a - b)
@@ -66,7 +66,7 @@ impl ColumnLetter {
         6 => Ok(ColumnLetter::G),
         7 => Ok(ColumnLetter::H),
         _ => {
-            if (size > 7) {
+            if size > 7 {
                 Err("Size larger than 7 in construct_letter_from_size")
             } else {   
                 Err("Size less than 0 in construct_letter_from_size")
@@ -625,7 +625,7 @@ impl Board {
         return_vector
     }
 
-    pub fn legal_move_available(&self, king_color: PieceColor, opt_previous_turn_board: Option<&Board>) -> bool {
+    pub fn legal_move_available(&self, opt_previous_turn_board: Option<&Board>) -> bool {
         let mut legal_move_available = false;
         for coordinate in Self::board_coords() {
             match self.retreive_square(&coordinate) {
@@ -808,13 +808,13 @@ impl Board {
         false
     }
 
-    pub fn square_threatens_square(&self, from: &Coordinates, to: &Coordinates, Opt_previous_board: Option<&Board>) -> bool {
+    pub fn square_threatens_square(&self, from: &Coordinates, to: &Coordinates, opt_previous_board: Option<&Board>) -> bool {
         match self.retreive_square(from) {
             Ok(found_square) => {
                 match found_square {
                     Square::Full(piece) => {
                         let distance_information = measure_distance(from, to);
-                        let (legal, _, _, _, _, _, _) = parse_move_legality(from, to, self, Opt_previous_board);
+                        let (legal, _, _, _, _, _, _) = parse_move_legality(from, to, self, opt_previous_board);
                         if legal {
                             match piece.kind {
                                 PieceKind::Pawn => {
@@ -1088,7 +1088,7 @@ impl Board {
                                 };
                                 //we can make the move they are requesting. Lets check what state this leaves the board in.
                                 match king_checkmate_state(opponent_color, &self, opt_previous_turn_board) {
-                                    Mate_State::Check => {
+                                    MateState::Check => {
                                         match opponent_color {
                                             PieceColor::Black => {
                                                 move_result = MoveResult::BlackKingChecked;
@@ -1098,16 +1098,16 @@ impl Board {
                                             }
                                         }
                                     }
-                                    Mate_State::CheckMate => {
+                                    MateState::CheckMate => {
                                         match opponent_color {
                                             PieceColor::Black => {move_result = MoveResult::BlackKingCheckmated},
                                             PieceColor::White => {move_result = MoveResult::WhiteKingCheckmated}
                                         }
                                     },
-                                    Mate_State::StaleMate => {
+                                    MateState::StaleMate => {
                                         move_result = MoveResult::Stalemate;
                                     },
-                                    Mate_State::Safe => {
+                                    MateState::Safe => {
                                         move_result = MoveResult::CompletedSafely;
                                     }
                                 }

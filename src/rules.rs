@@ -1,29 +1,29 @@
 use crate::board::*;
 use crate::pieces::*;
 
-pub enum Mate_State {
+pub enum MateState {
     StaleMate,
     CheckMate,
     Check,
     Safe
 }
 
-pub fn king_checkmate_state(king_color: PieceColor, chess_board: &Board, opt_previous_turn_board: Option<&Board>) -> Mate_State {
+pub fn king_checkmate_state(king_color: PieceColor, chess_board: &Board, opt_previous_turn_board: Option<&Board>) -> MateState {
     let king_currently_in_danger = chess_board.is_king_in_danger(king_color);
-    let legal_move_available = chess_board.legal_move_available(king_color, opt_previous_turn_board);
+    let legal_move_available = chess_board.legal_move_available(opt_previous_turn_board);
 
     match (king_currently_in_danger, legal_move_available) {
         (true, true) => {
-            Mate_State::Check
+            MateState::Check
         },
         (true, false) => {
-            Mate_State::CheckMate
+            MateState::CheckMate
         },
         (false, true) => {
-            Mate_State::Safe
+            MateState::Safe
         },
         (false, false) => {
-            Mate_State::StaleMate
+            MateState::StaleMate
         }
     }
 }
@@ -48,14 +48,14 @@ pub fn would_king_be_in_danger(board: Board, from: &Coordinates, to: &Coordinate
     }        
 }
 
-pub fn square_meets_expectations(
+fn square_meets_expectations(
     board: &Board,
     target_coords: &Coordinates,
     should_be_empty: bool,
     expected_piece_color: PieceColor,
     expected_piece_kind: PieceKind
 ) -> bool {
-    let mut meets_expectations = false;
+    let meets_expectations: bool;
 
     match board.retreive_square(target_coords) {
         Ok(square) => {
@@ -106,11 +106,11 @@ pub fn en_passant_legal(
 
     let current_target_square_as_expected = square_meets_expectations(current_turn_board, &current_turn_coords, false, target_pawn_color, PieceKind::Pawn);
 
-    if (current_target_square_as_expected) {
+    if current_target_square_as_expected {
         let current_left_square_as_expected = square_meets_expectations(current_turn_board, &previous_turn_coords, true, target_pawn_color, PieceKind::Pawn);
-        if (current_left_square_as_expected) {
+        if current_left_square_as_expected {
             let previous_turn_left_square_meets_expectations = square_meets_expectations(previous_turn_board, &previous_turn_coords, false, target_pawn_color, PieceKind::Pawn);
-            if (previous_turn_left_square_meets_expectations) {
+            if previous_turn_left_square_meets_expectations {
                 move_legal = true;
             }
         }

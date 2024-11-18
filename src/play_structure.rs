@@ -37,7 +37,18 @@ fn play_chess() {
 
         match indication_number {
             1 => {
-                move_piece_on_board(&mut current_board, &mut board_states);
+                match move_piece_on_board(&mut current_board, &mut board_states) {
+                    MoveResult::BlackKingCheckmated => {
+                        alienify_output_text("Black king has been put in checkmate. The game is over.");
+                    },
+                    MoveResult::WhiteKingCheckmated => {
+                        alienify_output_text("White king has been put in checkmate. The game is over.");
+                    },
+                    MoveResult::Stalemate => {
+                        println!("The game has ended in a stalemate!");
+                    },
+                    _ => {}
+                }
             },
             2 => {
                 query_legal_squares(&current_board, board_states.last());
@@ -149,7 +160,8 @@ fn show_specific_turn_state(previous_states: &Vec<Board>) {
     }
 }
 
-fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Board>) {
+fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Board>) -> MoveResult {
+    let mut final_result = MoveResult::CompletedSafely;
     loop {
         alienify_output_text("Please enter a move in the form: a3 b3. Otherwise enter X to exit.");
     
@@ -173,7 +185,8 @@ fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Board>)
                     match parse_square(&indication[3..5]) {
                         Ok(to) => {
                             let previous_board = board_states.last();
-                            match current_board.move_piece(&from, &to, previous_board) {
+                            final_result = current_board.move_piece(&from, &to, previous_board);
+                            match final_result {
                                 MoveResult::CompletedSafely => {
                                     board_states.push(previous_turn_board);
                                     break;
@@ -181,9 +194,10 @@ fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Board>)
                                 MoveResult::WrongTurn => {
                                     println!("Oops! It looks like you tried to move the wrong piece. It's {}'s turn", current_board.get_turn_full());
                                 },
-                                result => {
-                                    println!("{}", result);
-                                    break;}
+                                MoveResult::MoveIllegal => {
+                                    alienify_output_text("It appears that that was an illegal move! I'm sorry.");
+                                },
+                                _ => {}
                             }
                         },
                         Err(_) => {
@@ -196,7 +210,7 @@ fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Board>)
         }
     
     }
-    
+    final_result
 }
 
 pub fn query_legal_squares(current_board: &Board, opt_previous_turn_board: Option<&Board>) {
