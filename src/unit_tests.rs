@@ -1,4 +1,4 @@
-use crate::{board::{Board, ColumnLetter, Coordinates, MoveResult, Row, SideInformation, Square}, pieces::{Piece, PieceColor, PieceKind}};
+use crate::{board::{Board, ColumnLetter, Coordinates, MoveResult, Row, SideInformation, Square}, fen_parser::ingest_fen_file, pieces::{Piece, PieceColor, PieceKind}};
 
 #[test]
 fn test_cloning_board_works() {
@@ -193,4 +193,12 @@ pub fn test_en_passant_should_pass() {
     assert!(en_passant_move_result == MoveResult::CompletedSafely);
 
     //now lets construct what the board should look like, and make sure not only that the move was legal, but the outcome was correct.
+}
+
+#[test]
+fn test_basic_read() {
+    println!("RUNNING TEST BASIC READ");
+    let result = ingest_fen_file("./src/fenFiles/basic.fen");
+
+    assert!(result == Some(Board::default()));
 }
