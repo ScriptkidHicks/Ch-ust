@@ -1,7 +1,10 @@
 use core::fmt;
 use std::{slice::Iter, thread, time};
 
-use crate::{pieces::*, rules::{king_checkmate_state, parse_move_legality, MateState}};
+use crate::{
+    pieces::*,
+    rules::{king_checkmate_state, parse_move_legality, MateState},
+};
 
 pub fn isize_difference(a: isize, b: isize) -> isize {
     isize::abs(a - b)
@@ -18,7 +21,7 @@ pub fn board_safe_isize_converter(size: isize) -> Result<usize, &'static str> {
         6 => Ok(6),
         7 => Ok(7),
         8 => Ok(8),
-        _ => Err("invalid value passed")
+        _ => Err("invalid value passed"),
     }
 }
 
@@ -31,63 +34,63 @@ pub enum ColumnLetter {
     E,
     F,
     G,
-    H
+    H,
 }
 
 impl ColumnLetter {
-   pub fn eval(&self) -> isize {
-    match self {
-         ColumnLetter::A => 0,
-         ColumnLetter::B => 1,
-         ColumnLetter::C => 2,
-         ColumnLetter::D => 3,
-         ColumnLetter::E => 4,
-         ColumnLetter::F => 5,
-         ColumnLetter::G => 6,
-         ColumnLetter::H => 7
+    pub fn eval(&self) -> isize {
+        match self {
+            ColumnLetter::A => 0,
+            ColumnLetter::B => 1,
+            ColumnLetter::C => 2,
+            ColumnLetter::D => 3,
+            ColumnLetter::E => 4,
+            ColumnLetter::F => 5,
+            ColumnLetter::G => 6,
+            ColumnLetter::H => 7,
+        }
     }
-   } 
 
-   pub fn iterator() -> Iter<'static, ColumnLetter> {
-    //do not widescope this level of letter access. Keep is strictly local
-    use ColumnLetter::*;
-    static LETTERS: [ColumnLetter; 8] = [A, B, C, D, E, F, G, H];
-    LETTERS.iter()
-   } 
+    pub fn iterator() -> Iter<'static, ColumnLetter> {
+        //do not widescope this level of letter access. Keep is strictly local
+        use ColumnLetter::*;
+        static LETTERS: [ColumnLetter; 8] = [A, B, C, D, E, F, G, H];
+        LETTERS.iter()
+    }
 
-   pub fn construct_letter_from_isize(size: isize) -> Result<ColumnLetter, &'static str> {
-    match size {
-        0 => Ok(ColumnLetter::A),
-        1 => Ok(ColumnLetter::B),
-        2 => Ok(ColumnLetter::C),
-        3 => Ok(ColumnLetter::D),
-        4 => Ok(ColumnLetter::E),
-        5 => Ok(ColumnLetter::F),
-        6 => Ok(ColumnLetter::G),
-        7 => Ok(ColumnLetter::H),
-        _ => {
-            if size > 7 {
-                Err("Size larger than 7 in construct_letter_from_size")
-            } else {   
-                Err("Size less than 0 in construct_letter_from_size")
+    pub fn construct_letter_from_isize(size: isize) -> Result<ColumnLetter, &'static str> {
+        match size {
+            0 => Ok(ColumnLetter::A),
+            1 => Ok(ColumnLetter::B),
+            2 => Ok(ColumnLetter::C),
+            3 => Ok(ColumnLetter::D),
+            4 => Ok(ColumnLetter::E),
+            5 => Ok(ColumnLetter::F),
+            6 => Ok(ColumnLetter::G),
+            7 => Ok(ColumnLetter::H),
+            _ => {
+                if size > 7 {
+                    Err("Size larger than 7 in construct_letter_from_size")
+                } else {
+                    Err("Size less than 0 in construct_letter_from_size")
+                }
             }
         }
     }
-   }
 
-   pub fn convert_to(letter: char) -> Result<ColumnLetter, &'static str> {
-    match letter.to_ascii_lowercase() {
-        'a' => Ok(ColumnLetter::A),
-        'b' => Ok(ColumnLetter::B),
-        'c' => Ok(ColumnLetter::C),
-        'd' => Ok(ColumnLetter::D),
-        'e' => Ok(ColumnLetter::E),
-        'f' => Ok(ColumnLetter::F),
-        'g' => Ok(ColumnLetter::G),
-        'h' => Ok(ColumnLetter::H),
-        _ => Err("Not a valid col")
+    pub fn convert_to(letter: char) -> Result<ColumnLetter, &'static str> {
+        match letter.to_ascii_lowercase() {
+            'a' => Ok(ColumnLetter::A),
+            'b' => Ok(ColumnLetter::B),
+            'c' => Ok(ColumnLetter::C),
+            'd' => Ok(ColumnLetter::D),
+            'e' => Ok(ColumnLetter::E),
+            'f' => Ok(ColumnLetter::F),
+            'g' => Ok(ColumnLetter::G),
+            'h' => Ok(ColumnLetter::H),
+            _ => Err("Not a valid col"),
+        }
     }
-   }
 }
 
 impl fmt::Display for ColumnLetter {
@@ -108,7 +111,7 @@ pub enum MoveDirection {
     DownRight,
     JHook,
     NoMove,
-    IllegalMove
+    IllegalMove,
 }
 
 impl fmt::Display for MoveDirection {
@@ -124,25 +127,28 @@ impl fmt::Display for MoveDirection {
             Self::UpLeft => write!(f, "Up Left"),
             Self::UpRight => write!(f, "Up Right"),
             Self::IllegalMove => write!(f, "Illegal Move"),
-            Self::NoMove => write!(f, "No Move")
+            Self::NoMove => write!(f, "No Move"),
         }
     }
 }
 
 pub struct SquareToSquareInformation {
     pub move_direction: MoveDirection,
-    pub distance: isize
+    pub distance: isize,
 }
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct Coordinates {
     pub letter: ColumnLetter,
-    pub number: isize
+    pub number: isize,
 }
 
 impl Coordinates {
     pub fn new(input_letter: ColumnLetter, input_row: isize) -> Coordinates {
-        Coordinates {letter: input_letter, number: input_row}
+        Coordinates {
+            letter: input_letter,
+            number: input_row,
+        }
     }
 }
 
@@ -158,15 +164,13 @@ pub fn measure_distance(from: &Coordinates, to: &Coordinates) -> SquareToSquareI
     if from.number < 1 || from.number > 8 || to.number < 0 || to.number > 8 {
         return SquareToSquareInformation {
             move_direction: garnered_move_direction,
-            distance: 0
-        }
+            distance: 0,
+        };
     }
-    
 
-    let lat_distance = isize_difference(from.letter.eval(), to.letter.eval()); 
+    let lat_distance = isize_difference(from.letter.eval(), to.letter.eval());
 
     let vert_distance = isize_difference(from.number, to.number);
-
 
     if from.letter == to.letter {
         if from.number > to.number {
@@ -198,7 +202,9 @@ pub fn measure_distance(from: &Coordinates, to: &Coordinates) -> SquareToSquareI
                     garnered_move_direction = MoveDirection::UpRight;
                 }
             }
-        } else if (lat_distance == 1 && vert_distance == 2) || (vert_distance == 1 && lat_distance == 2) {
+        } else if (lat_distance == 1 && vert_distance == 2)
+            || (vert_distance == 1 && lat_distance == 2)
+        {
             garnered_move_direction = MoveDirection::JHook;
         } else {
             garnered_move_direction = MoveDirection::IllegalMove;
@@ -207,7 +213,7 @@ pub fn measure_distance(from: &Coordinates, to: &Coordinates) -> SquareToSquareI
 
     SquareToSquareInformation {
         move_direction: garnered_move_direction,
-        distance: lat_distance + vert_distance
+        distance: lat_distance + vert_distance,
     }
 }
 
@@ -215,7 +221,7 @@ pub enum DiagonalDirection {
     UpLeft,
     UpRight,
     DownLeft,
-    DownRight
+    DownRight,
 }
 
 impl DiagonalDirection {
@@ -228,20 +234,24 @@ impl DiagonalDirection {
         }
     }
 
-    pub fn modify_letter_and_number_values(&self, letter_value: &mut isize, number_value: &mut isize) {
+    pub fn modify_letter_and_number_values(
+        &self,
+        letter_value: &mut isize,
+        number_value: &mut isize,
+    ) {
         match self {
             Self::DownLeft => {
                 *letter_value -= 1;
                 *number_value -= 1;
-            },
+            }
             Self::DownRight => {
                 *letter_value += 1;
                 *number_value -= 1;
-            },
+            }
             Self::UpLeft => {
                 *letter_value -= 1;
                 *number_value += 1;
-            },
+            }
             Self::UpRight => {
                 *letter_value += 1;
                 *number_value += 1;
@@ -253,17 +263,37 @@ impl DiagonalDirection {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Square {
     Empty,
-    Full(Piece)
+    Full(Piece),
 }
 
 impl Square {
-    pub fn get_legal_cross_targets(&self, coordinates: &Coordinates, board: &Board, legal_target_squares: &mut Vec<Coordinates>, opt_previous_board: Option<&Board>) {
+    pub fn get_legal_cross_targets(
+        &self,
+        coordinates: &Coordinates,
+        board: &Board,
+        legal_target_squares: &mut Vec<Coordinates>,
+        opt_previous_board: Option<&Board>,
+    ) {
         for i in 0..8 {
             match ColumnLetter::construct_letter_from_isize(i) {
                 Ok(found_letter) => {
-                    self.get_legal_single_target(coordinates, found_letter, coordinates.number, board, legal_target_squares, opt_previous_board);
-                    self.get_legal_single_target(coordinates, coordinates.letter, i, board, legal_target_squares, opt_previous_board);
-                },
+                    self.get_legal_single_target(
+                        coordinates,
+                        found_letter,
+                        coordinates.number,
+                        board,
+                        legal_target_squares,
+                        opt_previous_board,
+                    );
+                    self.get_legal_single_target(
+                        coordinates,
+                        coordinates.letter,
+                        i,
+                        board,
+                        legal_target_squares,
+                        opt_previous_board,
+                    );
+                }
                 Err(text) => {
                     panic!("{}", text);
                 }
@@ -271,16 +301,38 @@ impl Square {
         }
     }
 
-    pub fn get_legal_single_diagonal(&self, coordinates: &Coordinates, direction: DiagonalDirection, board: &Board, legal_target_squares: &mut Vec<Coordinates>, opt_previous_board: Option<&Board>) {
+    pub fn get_legal_single_diagonal(
+        &self,
+        coordinates: &Coordinates,
+        direction: DiagonalDirection,
+        board: &Board,
+        legal_target_squares: &mut Vec<Coordinates>,
+        opt_previous_board: Option<&Board>,
+    ) {
         let mut moving_letter_value = coordinates.letter.eval();
         let mut moving_number_value = coordinates.number;
 
-        while DiagonalDirection::conditional_continue(&direction, moving_letter_value, moving_number_value) {
+        while DiagonalDirection::conditional_continue(
+            &direction,
+            moving_letter_value,
+            moving_number_value,
+        ) {
             match ColumnLetter::construct_letter_from_isize(moving_letter_value) {
                 Ok(found_letter) => {
-                     DiagonalDirection::modify_letter_and_number_values(&direction, &mut moving_letter_value, &mut moving_number_value);
-                     self.get_legal_single_target(coordinates, found_letter, moving_number_value, board, legal_target_squares, opt_previous_board);
-                },
+                    DiagonalDirection::modify_letter_and_number_values(
+                        &direction,
+                        &mut moving_letter_value,
+                        &mut moving_number_value,
+                    );
+                    self.get_legal_single_target(
+                        coordinates,
+                        found_letter,
+                        moving_number_value,
+                        board,
+                        legal_target_squares,
+                        opt_previous_board,
+                    );
+                }
                 Err(_) => {
                     break;
                 }
@@ -288,30 +340,77 @@ impl Square {
         }
     }
 
-    pub fn get_legal_diagonal_targets(&self, coordinates: &Coordinates, board: &Board, legal_target_squares: &mut Vec<Coordinates>, opt_previous_board: Option<&Board>){
-        self.get_legal_single_diagonal(coordinates, DiagonalDirection::UpRight, board, legal_target_squares, opt_previous_board);
+    pub fn get_legal_diagonal_targets(
+        &self,
+        coordinates: &Coordinates,
+        board: &Board,
+        legal_target_squares: &mut Vec<Coordinates>,
+        opt_previous_board: Option<&Board>,
+    ) {
+        self.get_legal_single_diagonal(
+            coordinates,
+            DiagonalDirection::UpRight,
+            board,
+            legal_target_squares,
+            opt_previous_board,
+        );
 
-        self.get_legal_single_diagonal(coordinates, DiagonalDirection::DownRight, board, legal_target_squares, opt_previous_board);
+        self.get_legal_single_diagonal(
+            coordinates,
+            DiagonalDirection::DownRight,
+            board,
+            legal_target_squares,
+            opt_previous_board,
+        );
 
-        self.get_legal_single_diagonal(coordinates, DiagonalDirection::UpLeft, board, legal_target_squares, opt_previous_board);
+        self.get_legal_single_diagonal(
+            coordinates,
+            DiagonalDirection::UpLeft,
+            board,
+            legal_target_squares,
+            opt_previous_board,
+        );
 
-        self.get_legal_single_diagonal(coordinates, DiagonalDirection::DownLeft, board, legal_target_squares, opt_previous_board);
+        self.get_legal_single_diagonal(
+            coordinates,
+            DiagonalDirection::DownLeft,
+            board,
+            legal_target_squares,
+            opt_previous_board,
+        );
     }
 
-    pub fn get_legal_single_target(&self, from: &Coordinates, col_letter: ColumnLetter, row_number: isize, board: &Board, legal_target_squares: &mut Vec<Coordinates>, opt_previous_board: Option<&Board>) {
-        let investigating_coordinates = Coordinates{letter: col_letter, number: row_number};
-        let (move_legal, _, _, _, _, _, _) = parse_move_legality(from, &investigating_coordinates, board, opt_previous_board);
+    pub fn get_legal_single_target(
+        &self,
+        from: &Coordinates,
+        col_letter: ColumnLetter,
+        row_number: isize,
+        board: &Board,
+        legal_target_squares: &mut Vec<Coordinates>,
+        opt_previous_board: Option<&Board>,
+    ) {
+        let investigating_coordinates = Coordinates {
+            letter: col_letter,
+            number: row_number,
+        };
+        let (move_legal, _, _, _, _, _, _) =
+            parse_move_legality(from, &investigating_coordinates, board, opt_previous_board);
         if move_legal {
             legal_target_squares.push(investigating_coordinates);
         }
     }
 
-    pub fn get_legal_targets(&self, coordinates: &Coordinates, board: &Board, opt_previous_board: Option<&Board>) -> Vec<Coordinates> {
+    pub fn get_legal_targets(
+        &self,
+        coordinates: &Coordinates,
+        board: &Board,
+        opt_previous_board: Option<&Board>,
+    ) -> Vec<Coordinates> {
         let mut legal_target_squares: Vec<Coordinates> = Vec::new();
 
         match self {
-            Square::Empty => {//do nothing. No legal targets for an empty square.
-                },
+            Square::Empty => { //do nothing. No legal targets for an empty square.
+            }
             Square::Full(piece) => {
                 match piece.kind {
                     PieceKind::Pawn => {
@@ -321,7 +420,7 @@ impl Square {
                             PieceColor::Black => {
                                 single_step = -1;
                                 double_step = -2;
-                            },
+                            }
                             PieceColor::White => {
                                 single_step = 1;
                                 double_step = -2;
@@ -329,63 +428,134 @@ impl Square {
                         };
 
                         //regular step forward
-                        self.get_legal_single_target(coordinates, coordinates.letter, coordinates.number + single_step, board, &mut legal_target_squares, opt_previous_board);
+                        self.get_legal_single_target(
+                            coordinates,
+                            coordinates.letter,
+                            coordinates.number + single_step,
+                            board,
+                            &mut legal_target_squares,
+                            opt_previous_board,
+                        );
 
                         //double jump. We can let parsing handle the legality.
-                        self.get_legal_single_target(coordinates, coordinates.letter, coordinates.number + double_step, board, &mut legal_target_squares, opt_previous_board);
+                        self.get_legal_single_target(
+                            coordinates,
+                            coordinates.letter,
+                            coordinates.number + double_step,
+                            board,
+                            &mut legal_target_squares,
+                            opt_previous_board,
+                        );
 
                         //now lets try the two attack vectors
                         let attack_vectors: Vec<isize> = vec![-1, 1];
                         for vector in attack_vectors {
-                            match ColumnLetter::construct_letter_from_isize(coordinates.letter.eval() + vector) {
+                            match ColumnLetter::construct_letter_from_isize(
+                                coordinates.letter.eval() + vector,
+                            ) {
                                 Ok(new_letter) => {
-                                    self.get_legal_single_target(coordinates, new_letter, coordinates.number + single_step, board, &mut legal_target_squares, opt_previous_board);
-                                },
+                                    self.get_legal_single_target(
+                                        coordinates,
+                                        new_letter,
+                                        coordinates.number + single_step,
+                                        board,
+                                        &mut legal_target_squares,
+                                        opt_previous_board,
+                                    );
+                                }
                                 Err(_) => {
                                     //this is fine. It's just on the edge
                                 }
                             }
                         }
-                    },
+                    }
                     PieceKind::Rook => {
-                        self.get_legal_cross_targets(coordinates, board, &mut legal_target_squares, opt_previous_board);
-                    },
+                        self.get_legal_cross_targets(
+                            coordinates,
+                            board,
+                            &mut legal_target_squares,
+                            opt_previous_board,
+                        );
+                    }
                     PieceKind::Knight => {
-                        let row_alters: Vec<(isize, isize)> = vec![(-2, -1), (-2, 1), (2, -1), (2, 1)];
+                        let row_alters: Vec<(isize, isize)> =
+                            vec![(-2, -1), (-2, 1), (2, -1), (2, 1)];
                         for (alter_a, alter_b) in row_alters {
-                            match ColumnLetter::construct_letter_from_isize(coordinates.letter.eval() + alter_a) {
+                            match ColumnLetter::construct_letter_from_isize(
+                                coordinates.letter.eval() + alter_a,
+                            ) {
                                 Ok(new_letter) => {
-                                    self.get_legal_single_target(coordinates, new_letter, coordinates.number + alter_b, board, &mut legal_target_squares, opt_previous_board);
-                                },
+                                    self.get_legal_single_target(
+                                        coordinates,
+                                        new_letter,
+                                        coordinates.number + alter_b,
+                                        board,
+                                        &mut legal_target_squares,
+                                        opt_previous_board,
+                                    );
+                                }
                                 Err(_) => {
                                     //oops, out of bounds
                                 }
                             }
-                            match ColumnLetter::construct_letter_from_isize(coordinates.letter.eval() + alter_b) {
+                            match ColumnLetter::construct_letter_from_isize(
+                                coordinates.letter.eval() + alter_b,
+                            ) {
                                 Ok(new_letter) => {
-                                    self.get_legal_single_target(coordinates, new_letter, coordinates.number + alter_a, board, &mut legal_target_squares, opt_previous_board);
-                                },
+                                    self.get_legal_single_target(
+                                        coordinates,
+                                        new_letter,
+                                        coordinates.number + alter_a,
+                                        board,
+                                        &mut legal_target_squares,
+                                        opt_previous_board,
+                                    );
+                                }
                                 Err(_) => {
                                     //oops, out of bounds
                                 }
                             }
                         }
-                    },
+                    }
                     PieceKind::Bishop => {
-                        self.get_legal_diagonal_targets(coordinates, board, &mut legal_target_squares, opt_previous_board);
-                    },
+                        self.get_legal_diagonal_targets(
+                            coordinates,
+                            board,
+                            &mut legal_target_squares,
+                            opt_previous_board,
+                        );
+                    }
                     PieceKind::Queen => {
-                        self.get_legal_cross_targets(coordinates, board, &mut legal_target_squares, opt_previous_board);
-                        self.get_legal_diagonal_targets(coordinates, board, &mut legal_target_squares, opt_previous_board);
-                    },
+                        self.get_legal_cross_targets(
+                            coordinates,
+                            board,
+                            &mut legal_target_squares,
+                            opt_previous_board,
+                        );
+                        self.get_legal_diagonal_targets(
+                            coordinates,
+                            board,
+                            &mut legal_target_squares,
+                            opt_previous_board,
+                        );
+                    }
                     PieceKind::King => {
                         for row_mod in -1..2 {
                             for col_mod in -1..2 {
-                                match ColumnLetter::construct_letter_from_isize(coordinates.letter.eval() + col_mod) {
+                                match ColumnLetter::construct_letter_from_isize(
+                                    coordinates.letter.eval() + col_mod,
+                                ) {
                                     Ok(new_letter) => {
                                         //ok, we have a new valid column, So lets go check if we can get that square.
-                                        self.get_legal_single_target(coordinates, new_letter, coordinates.number + row_mod, board, &mut legal_target_squares, opt_previous_board);
-                                    },
+                                        self.get_legal_single_target(
+                                            coordinates,
+                                            new_letter,
+                                            coordinates.number + row_mod,
+                                            board,
+                                            &mut legal_target_squares,
+                                            opt_previous_board,
+                                        );
+                                    }
                                     Err(_) => {
                                         //That's ok, it's just out of bounds
                                     }
@@ -400,7 +570,12 @@ impl Square {
         legal_target_squares
     }
 
-    pub fn show_me_legal_squares(&self, coordinates: &Coordinates, board: &Board, opt_previous_board: Option<&Board>) {
+    pub fn show_me_legal_squares(
+        &self,
+        coordinates: &Coordinates,
+        board: &Board,
+        opt_previous_board: Option<&Board>,
+    ) {
         let legal_squares = self.get_legal_targets(coordinates, board, opt_previous_board);
         for target in legal_squares {
             print!("{} ", target);
@@ -413,14 +588,14 @@ impl fmt::Display for Square {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Empty => write!(f, "[  ]"),
-            Self::Full(piece) => write!(f, "[{}{}]",piece.color, piece.kind)
+            Self::Full(piece) => write!(f, "[{}{}]", piece.color, piece.kind),
         }
     }
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Row {
-    squares: [Square; 8]
+    squares: [Square; 8],
 }
 
 impl fmt::Display for Row {
@@ -435,22 +610,22 @@ impl fmt::Display for Row {
 impl Row {
     pub fn default() -> Self {
         Row {
-            squares: [Square::Empty; 8]
+            squares: [Square::Empty; 8],
         }
     }
 
     pub fn new(input_squares: [Square; 8]) -> Row {
         Row {
-            squares: input_squares
+            squares: input_squares,
         }
     }
 
     pub fn pawn_row(piece_color: PieceColor) -> Self {
         Row {
-            squares: [Square::Full(Piece{
+            squares: [Square::Full(Piece {
                 color: piece_color,
-                kind: PieceKind::Pawn
-            }); 8]
+                kind: PieceKind::Pawn,
+            }); 8],
         }
     }
 
@@ -459,37 +634,37 @@ impl Row {
             squares: [
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Rook
+                    kind: PieceKind::Rook,
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Knight
+                    kind: PieceKind::Knight,
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Bishop
+                    kind: PieceKind::Bishop,
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Queen
+                    kind: PieceKind::Queen,
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::King
+                    kind: PieceKind::King,
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Bishop
+                    kind: PieceKind::Bishop,
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Knight
+                    kind: PieceKind::Knight,
                 }),
                 Square::Full(Piece {
                     color: piece_color,
-                    kind: PieceKind::Rook
+                    kind: PieceKind::Rook,
                 }),
-            ]
+            ],
         }
     }
 
@@ -498,29 +673,31 @@ impl Row {
     }
 }
 
-
 #[derive(Clone, PartialEq)]
 pub struct SideInformation {
     taken_pieces: Vec<PieceKind>,
     can_castle_kingside: bool,
     can_castle_queenside: bool,
-    current_king_square: Coordinates
+    current_king_square: Coordinates,
 }
 
 impl SideInformation {
-    pub fn default (king_color: PieceColor) -> Self {
+    pub fn default(king_color: PieceColor) -> Self {
         SideInformation {
             taken_pieces: Vec::new(),
             can_castle_kingside: true,
             can_castle_queenside: false,
-            current_king_square: Coordinates {letter: ColumnLetter::E, number: match king_color {
-                PieceColor::Black => 8,
-                PieceColor::White => 1
-            }}
+            current_king_square: Coordinates {
+                letter: ColumnLetter::E,
+                number: match king_color {
+                    PieceColor::Black => 8,
+                    PieceColor::White => 1,
+                },
+            },
         }
     }
 
-    pub fn add_taken_piece (&mut self, piece_kind: PieceKind) {
+    pub fn add_taken_piece(&mut self, piece_kind: PieceKind) {
         self.taken_pieces.push(piece_kind);
     }
 
@@ -532,19 +709,30 @@ impl SideInformation {
         total_value
     }
 
-    pub fn update_king_location (&mut self, letter: &ColumnLetter, number: &isize) {
-        self.current_king_square = Coordinates {letter: *letter, number: *number};
+    pub fn update_king_location(&mut self, letter: &ColumnLetter, number: &isize) {
+        self.current_king_square = Coordinates {
+            letter: *letter,
+            number: *number,
+        };
         //moving your king at all negats your ability to castle on both sides.
         self.can_castle_kingside = false;
         self.can_castle_queenside = false;
     }
 
-    pub fn king_can_castle (&self, is_kingside_query: bool) -> bool {
-        if is_kingside_query { self.can_castle_kingside } else { self.can_castle_queenside }
+    pub fn king_can_castle(&self, is_kingside_query: bool) -> bool {
+        if is_kingside_query {
+            self.can_castle_kingside
+        } else {
+            self.can_castle_queenside
+        }
     }
 
     pub fn remove_castling_rights(&mut self, is_kingside: bool) {
-        if is_kingside {self.can_castle_kingside = false;} else {self.can_castle_queenside = false;} 
+        if is_kingside {
+            self.can_castle_kingside = false;
+        } else {
+            self.can_castle_queenside = false;
+        }
     }
 }
 
@@ -558,7 +746,7 @@ pub enum MoveResult {
     Stalemate,
     WrongTurn,
     MoveIllegal,
-    EmptySquare
+    EmptySquare,
 }
 
 impl fmt::Display for MoveResult {
@@ -572,7 +760,7 @@ pub struct Board {
     rows: [Row; 8],
     turn: PieceColor,
     white_side_information: SideInformation,
-    black_side_information: SideInformation
+    black_side_information: SideInformation,
 }
 
 impl Board {
@@ -586,20 +774,25 @@ impl Board {
                 Row::default(),
                 Row::default(),
                 Row::pawn_row(PieceColor::White),
-                Row::default_back_row(PieceColor::White)
+                Row::default_back_row(PieceColor::White),
             ],
             turn: PieceColor::White,
             white_side_information: SideInformation::default(PieceColor::White),
-            black_side_information: SideInformation::default(PieceColor::Black)
+            black_side_information: SideInformation::default(PieceColor::Black),
         }
     }
 
-    pub fn new (input_rows: [Row; 8], current_turn: PieceColor, input_white_side: SideInformation, input_black_side: SideInformation) -> Board {
+    pub fn new(
+        input_rows: [Row; 8],
+        current_turn: PieceColor,
+        input_white_side: SideInformation,
+        input_black_side: SideInformation,
+    ) -> Board {
         Board {
             rows: input_rows,
             turn: current_turn,
             white_side_information: input_white_side,
-            black_side_information: input_black_side
+            black_side_information: input_black_side,
         }
     }
 
@@ -609,8 +802,8 @@ impl Board {
 
     pub fn get_turn_full(&self) -> &'static str {
         match self.turn {
-            PieceColor::White => {"white"},
-            PieceColor::Black => {"black"}
+            PieceColor::White => "white",
+            PieceColor::Black => "black",
         }
     }
 
@@ -619,7 +812,10 @@ impl Board {
 
         for row_number in 1..9 {
             for current_letter in ColumnLetter::iterator() {
-                return_vector.push(Coordinates{letter: *current_letter, number: row_number});
+                return_vector.push(Coordinates {
+                    letter: *current_letter,
+                    number: row_number,
+                });
             }
         }
         return_vector
@@ -630,12 +826,15 @@ impl Board {
         for coordinate in Self::board_coords() {
             match self.retreive_square(&coordinate) {
                 Ok(square) => {
-                    if !square.get_legal_targets(&coordinate, self, opt_previous_turn_board).is_empty() {
+                    if !square
+                        .get_legal_targets(&coordinate, self, opt_previous_turn_board)
+                        .is_empty()
+                    {
                         // if it's not empty we know that there are legal targets that would not put the king in danger, so we can break early. We only need one legal move to be available
                         legal_move_available = true;
                         break;
                     }
-                },
+                }
                 Err(_) => {
                     panic!("Error. Attempted to find move legality for square {}, and it did not exist", coordinate);
                 }
@@ -645,15 +844,19 @@ impl Board {
         legal_move_available
     }
 
-    pub fn show_me_legal_squares(&self, coords: &Coordinates, opt_previous_turn_board: Option<&Board>) {
+    pub fn show_me_legal_squares(
+        &self,
+        coords: &Coordinates,
+        opt_previous_turn_board: Option<&Board>,
+    ) {
         match self.retreive_square(coords) {
             Ok(retrieved_square) => {
                 retrieved_square.show_me_legal_squares(coords, self, opt_previous_turn_board);
-            },
+            }
             Err(_) => {}
         }
     }
-    
+
     fn convert_row_usize(size: usize) -> Result<usize, &'static str> {
         if size > 0 && size < 9 {
             Ok(7 - (size - 1))
@@ -664,52 +867,50 @@ impl Board {
 
     pub fn retreive_square(&self, coords: &Coordinates) -> Result<Square, &'static str> {
         match board_safe_isize_converter(coords.number) {
-            Ok(usize_number) => {
-                match board_safe_isize_converter(coords.letter.eval()) {
-                    Ok(usize_letter) => {
-                        match Self::convert_row_usize(usize_number) {
-                            Ok(converted_size) => {
-                                Ok((self.rows[converted_size].squares[usize_letter]).clone())
-                            },
-                            Err(error_text) => {
-                                Err(error_text)
-                            }
-                        }
-                    },
-                    Err(letter_text) => Err(letter_text) 
-                }
+            Ok(usize_number) => match board_safe_isize_converter(coords.letter.eval()) {
+                Ok(usize_letter) => match Self::convert_row_usize(usize_number) {
+                    Ok(converted_size) => {
+                        Ok((self.rows[converted_size].squares[usize_letter]).clone())
+                    }
+                    Err(error_text) => Err(error_text),
+                },
+                Err(letter_text) => Err(letter_text),
             },
-            Err(number_text) => Err(number_text) 
+            Err(number_text) => Err(number_text),
         }
     }
 
     pub fn set_square(&mut self, coords: &Coordinates, square: Square) {
         match board_safe_isize_converter(coords.number) {
-            Ok(usize_number) => {
-                match board_safe_isize_converter(coords.letter.eval()) {
-                    Ok(usize_letter) => {
-                        match Self::convert_row_usize(usize_number) {
-                            Ok(converted_rowsize) => {
-                                self.rows[converted_rowsize].squares[usize_letter] = square;
-                            },
-                            Err(_) => {}
-                        }
-                    },
-                    Err(_) => ()
-                }
+            Ok(usize_number) => match board_safe_isize_converter(coords.letter.eval()) {
+                Ok(usize_letter) => match Self::convert_row_usize(usize_number) {
+                    Ok(converted_rowsize) => {
+                        self.rows[converted_rowsize].squares[usize_letter] = square;
+                    }
+                    Err(_) => {}
+                },
+                Err(_) => (),
             },
-            Err(_) => ()
+            Err(_) => (),
         }
     }
 
-    pub fn king_can_castle (&self, king_color: PieceColor, is_kingside_query: bool) -> bool {
+    pub fn king_can_castle(&self, king_color: PieceColor, is_kingside_query: bool) -> bool {
         if self.is_king_in_danger(king_color) {
             //now now, no castling out of check.
             return false;
         }
         match king_color {
-            PieceColor::Black => self.black_side_information.king_can_castle(is_kingside_query) && self.is_castling_safe(king_color, is_kingside_query),
-            PieceColor::White => self.white_side_information.king_can_castle(is_kingside_query) && self.is_castling_safe(king_color, is_kingside_query)
+            PieceColor::Black => {
+                self.black_side_information
+                    .king_can_castle(is_kingside_query)
+                    && self.is_castling_safe(king_color, is_kingside_query)
+            }
+            PieceColor::White => {
+                self.white_side_information
+                    .king_can_castle(is_kingside_query)
+                    && self.is_castling_safe(king_color, is_kingside_query)
+            }
         }
     }
 
@@ -719,85 +920,148 @@ impl Board {
 
         let row_number: isize = match king_color {
             PieceColor::Black => 8,
-            PieceColor::White => 1
+            PieceColor::White => 1,
         };
 
         let empty_square = Square::Empty;
-        match copied_board.retreive_square(&Coordinates{letter: ColumnLetter::E, number: row_number}) {
+        match copied_board.retreive_square(&Coordinates {
+            letter: ColumnLetter::E,
+            number: row_number,
+        }) {
             Ok(found_square) => {
                 let moved_square = found_square.clone();
                 if is_kingside_query {
-                    copied_board.set_square(&Coordinates{letter: ColumnLetter::E, number: row_number}, empty_square);
-                    copied_board.set_square(&Coordinates{letter: ColumnLetter::F, number: row_number}, moved_square);
+                    copied_board.set_square(
+                        &Coordinates {
+                            letter: ColumnLetter::E,
+                            number: row_number,
+                        },
+                        empty_square,
+                    );
+                    copied_board.set_square(
+                        &Coordinates {
+                            letter: ColumnLetter::F,
+                            number: row_number,
+                        },
+                        moved_square,
+                    );
                     if copied_board.is_king_in_danger(king_color) {
                         //keep your functions flat and return early.
                         return false;
                     }
                     //ok, so we know that it's safe to keep going. Lets check the next state.
-                    copied_board.set_square(&Coordinates{letter: ColumnLetter::F, number: row_number}, empty_square);
-                    copied_board.set_square(&Coordinates{letter: ColumnLetter::G, number: row_number}, moved_square);
+                    copied_board.set_square(
+                        &Coordinates {
+                            letter: ColumnLetter::F,
+                            number: row_number,
+                        },
+                        empty_square,
+                    );
+                    copied_board.set_square(
+                        &Coordinates {
+                            letter: ColumnLetter::G,
+                            number: row_number,
+                        },
+                        moved_square,
+                    );
                     if copied_board.is_king_in_danger(king_color) {
                         return false;
                     }
                     // we don't need to check hopping the rook over the king, because there isn't a way to threaten the king by moving that rook.
                 } else {
-                    copied_board.set_square(&Coordinates{letter: ColumnLetter::E, number: row_number}, empty_square);
-                    copied_board.set_square(&Coordinates{letter: ColumnLetter::D, number: row_number}, moved_square);
+                    copied_board.set_square(
+                        &Coordinates {
+                            letter: ColumnLetter::E,
+                            number: row_number,
+                        },
+                        empty_square,
+                    );
+                    copied_board.set_square(
+                        &Coordinates {
+                            letter: ColumnLetter::D,
+                            number: row_number,
+                        },
+                        moved_square,
+                    );
                     if copied_board.is_king_in_danger(king_color) {
                         //keep your functions flat and return early.
                         return false;
                     }
                     //ok, so we know that it's safe to keep going. Lets check the next state.
-                    copied_board.set_square(&Coordinates{letter: ColumnLetter::D, number: row_number}, empty_square);
-                    copied_board.set_square(&Coordinates{letter: ColumnLetter::C, number: row_number}, moved_square);
+                    copied_board.set_square(
+                        &Coordinates {
+                            letter: ColumnLetter::D,
+                            number: row_number,
+                        },
+                        empty_square,
+                    );
+                    copied_board.set_square(
+                        &Coordinates {
+                            letter: ColumnLetter::C,
+                            number: row_number,
+                        },
+                        moved_square,
+                    );
                     if copied_board.is_king_in_danger(king_color) {
                         return false;
                     }
                 }
 
-
                 //if we made it here, then it's safe to return true.
                 true
-            },
+            }
             Err(_) => {
-                panic!("You failed to retreive the square the king should be on at E{}", row_number)
+                panic!(
+                    "You failed to retreive the square the king should be on at E{}",
+                    row_number
+                )
             }
         }
     }
 
     pub fn remove_castling_rights(&mut self, side_color: PieceColor, is_kingside: bool) {
         match side_color {
-            PieceColor::Black => self.black_side_information.remove_castling_rights(is_kingside),
-            PieceColor::White => self.white_side_information.remove_castling_rights(is_kingside),
+            PieceColor::Black => self
+                .black_side_information
+                .remove_castling_rights(is_kingside),
+            PieceColor::White => self
+                .white_side_information
+                .remove_castling_rights(is_kingside),
         }
     }
 
     pub fn is_king_in_danger(&self, king_color: PieceColor) -> bool {
-
         let target_king_coordinates = match king_color {
             PieceColor::Black => self.black_side_information.current_king_square,
-            PieceColor::White => self.white_side_information.current_king_square
+            PieceColor::White => self.white_side_information.current_king_square,
         };
 
         for letter in ColumnLetter::iterator() {
             for number in 1..9 {
-                let from_coords = Coordinates{letter: *letter, number: number};
+                let from_coords = Coordinates {
+                    letter: *letter,
+                    number: number,
+                };
                 match self.retreive_square(&from_coords) {
                     Ok(gotten_square) => {
                         match gotten_square {
-                            Square::Full(piece ) => {
+                            Square::Full(piece) => {
                                 // we only care about the ability of other pieces to tkae our king;
                                 if piece.color != king_color {
                                     //only pieces of the opposite color can threaten the king
-                                    if self.square_threatens_square(&from_coords, &target_king_coordinates, None) {
+                                    if self.square_threatens_square(
+                                        &from_coords,
+                                        &target_king_coordinates,
+                                        None,
+                                    ) {
                                         // oops, we found a square that threatens the king. Can't allow that!
                                         return true;
                                     }
                                 }
-                            },
-                            Square::Empty => ()
+                            }
+                            Square::Empty => (),
                         }
-                    },
+                    }
                     Err(text) => {
                         panic!("oops we tried to retrieve an illegal square in is_king_in_danger with error {}", text)
                     }
@@ -808,29 +1072,38 @@ impl Board {
         false
     }
 
-    pub fn square_threatens_square(&self, from: &Coordinates, to: &Coordinates, opt_previous_board: Option<&Board>) -> bool {
+    pub fn square_threatens_square(
+        &self,
+        from: &Coordinates,
+        to: &Coordinates,
+        opt_previous_board: Option<&Board>,
+    ) -> bool {
         match self.retreive_square(from) {
             Ok(found_square) => {
                 match found_square {
                     Square::Full(piece) => {
                         let distance_information = measure_distance(from, to);
-                        let (legal, _, _, _, _, _, _) = parse_move_legality(from, to, self, opt_previous_board);
+                        let (legal, _, _, _, _, _, _) =
+                            parse_move_legality(from, to, self, opt_previous_board);
                         if legal {
                             match piece.kind {
                                 PieceKind::Pawn => {
                                     //pawns are a special case because they can move up or down, but can only take on the diagonal.
-                                    distance_information.distance == 2 && (distance_information.move_direction != MoveDirection::Up && distance_information.move_direction != MoveDirection::Down)
-                                },
-                                _ => true
+                                    distance_information.distance == 2
+                                        && (distance_information.move_direction
+                                            != MoveDirection::Up
+                                            && distance_information.move_direction
+                                                != MoveDirection::Down)
+                                }
+                                _ => true,
                             }
                         } else {
                             false
                         }
-
-                    },
-                    Square::Empty => false //can't threaten another square with an empty square.
+                    }
+                    Square::Empty => false, //can't threaten another square with an empty square.
                 }
-            },
+            }
             Err(_) => {
                 panic!("oops, we tried to check if a square threatens another but that square was illegal!")
             }
@@ -848,10 +1121,10 @@ impl Board {
                     Square::Full(_) => {
                         *path_clear = false;
                         false
-                    },
+                    }
                     Square::Empty => true, //Expected and fine
                 }
-            },
+            }
             Err(_) => {
                 Self::panic_in_twixt_hither();
                 false
@@ -859,7 +1132,12 @@ impl Board {
         }
     }
 
-    pub fn twixt_hither_and_yon(&self, from: &Coordinates, to: &Coordinates, direction: MoveDirection) -> bool {
+    pub fn twixt_hither_and_yon(
+        &self,
+        from: &Coordinates,
+        to: &Coordinates,
+        direction: MoveDirection,
+    ) -> bool {
         let mut path_clear = true;
 
         let from_letter_value = from.letter.eval();
@@ -869,113 +1147,156 @@ impl Board {
         match direction {
             MoveDirection::Down => {
                 for i in (to_number_value + 1)..(from_number_value) {
-                    if !self.inner_path_clear_checking(&mut path_clear, &Coordinates{ letter: from.letter, number: i}) {
+                    if !self.inner_path_clear_checking(
+                        &mut path_clear,
+                        &Coordinates {
+                            letter: from.letter,
+                            number: i,
+                        },
+                    ) {
                         break;
                     }
                 }
-            },
+            }
             MoveDirection::Up => {
                 for i in (from_number_value + 1)..to_number_value {
-                    if !self.inner_path_clear_checking(&mut path_clear, &Coordinates{ letter: from.letter, number: i}) {
+                    if !self.inner_path_clear_checking(
+                        &mut path_clear,
+                        &Coordinates {
+                            letter: from.letter,
+                            number: i,
+                        },
+                    ) {
                         break;
                     }
                 }
-            },
+            }
             MoveDirection::Left => {
                 for i in (to_letter_value + 1)..from_letter_value {
                     match ColumnLetter::construct_letter_from_isize(i) {
                         Ok(found_letter) => {
-                            if !self.inner_path_clear_checking(&mut path_clear, &Coordinates {letter: found_letter, number: from_number_value}) {
+                            if !self.inner_path_clear_checking(
+                                &mut path_clear,
+                                &Coordinates {
+                                    letter: found_letter,
+                                    number: from_number_value,
+                                },
+                            ) {
                                 break;
                             }
-                        },
+                        }
                         Err(_) => {
                             panic!("attempted to access out of bounds");
                         }
                     }
                 }
-            },
+            }
             MoveDirection::Right => {
                 for i in (from_letter_value + 1)..to_letter_value {
                     match ColumnLetter::construct_letter_from_isize(i) {
                         Ok(found_letter) => {
-                            if !self.inner_path_clear_checking(&mut path_clear, &Coordinates {letter: found_letter, number: from_number_value}) {
+                            if !self.inner_path_clear_checking(
+                                &mut path_clear,
+                                &Coordinates {
+                                    letter: found_letter,
+                                    number: from_number_value,
+                                },
+                            ) {
                                 break;
                             }
-                        },
+                        }
                         Err(_) => {
                             panic!("attempted to acces out of bounds");
                         }
                     }
                 }
-            },
+            }
             MoveDirection::DownLeft => {
                 let distance = from_letter_value - to_letter_value;
                 for i in 1..distance {
                     match ColumnLetter::construct_letter_from_isize(from_letter_value - i) {
                         Ok(found_letter) => {
-                            if self.inner_path_clear_checking(&mut path_clear, &Coordinates {
-                                letter: found_letter,
-                                number: from_number_value - i
-                            }) {
+                            if self.inner_path_clear_checking(
+                                &mut path_clear,
+                                &Coordinates {
+                                    letter: found_letter,
+                                    number: from_number_value - i,
+                                },
+                            ) {
                                 break;
                             }
-                        },
+                        }
                         Err(_) => {
                             panic!("attempted to access out of bounds")
                         }
                     }
                 }
-            },
+            }
             MoveDirection::DownRight => {
                 let distance = to_letter_value - from_letter_value;
                 for i in 1..distance {
                     match ColumnLetter::construct_letter_from_isize(from_letter_value + i) {
                         Ok(found_letter) => {
-                            if !self.inner_path_clear_checking(&mut path_clear, &Coordinates{letter: found_letter, number: from_number_value - i}) {
+                            if !self.inner_path_clear_checking(
+                                &mut path_clear,
+                                &Coordinates {
+                                    letter: found_letter,
+                                    number: from_number_value - i,
+                                },
+                            ) {
                                 break;
                             }
-                        },
+                        }
                         Err(_) => {
                             panic!("attempted to access out of bounds")
                         }
                     }
                 }
-                
-            },
+            }
             MoveDirection::UpLeft => {
                 let distance = to_number_value - from_number_value;
                 for i in 1..distance {
                     match ColumnLetter::construct_letter_from_isize(from_letter_value - i) {
                         Ok(found_letter) => {
-                            if !self.inner_path_clear_checking(&mut path_clear, &Coordinates{
-                        letter: found_letter,
-                        number: from_number_value + i
-                    }) {
-                        break;
-                    }
-                        },
-                        Err(_) => {panic!("attempted to access out of bounds")}
+                            if !self.inner_path_clear_checking(
+                                &mut path_clear,
+                                &Coordinates {
+                                    letter: found_letter,
+                                    number: from_number_value + i,
+                                },
+                            ) {
+                                break;
+                            }
+                        }
+                        Err(_) => {
+                            panic!("attempted to access out of bounds")
+                        }
                     }
                 }
-            },
+            }
             MoveDirection::UpRight => {
                 let distance = to_letter_value - from_letter_value;
                 for i in 1..distance {
                     // we can rely on the distance being equal, otherwise the move is illegal.
                     match ColumnLetter::construct_letter_from_isize(from_letter_value + i) {
                         Ok(found_letter) => {
-                            if !self.inner_path_clear_checking(&mut path_clear, &Coordinates {letter: found_letter, number: from_number_value + i}) {
+                            if !self.inner_path_clear_checking(
+                                &mut path_clear,
+                                &Coordinates {
+                                    letter: found_letter,
+                                    number: from_number_value + i,
+                                },
+                            ) {
                                 break;
                             }
-                        }, 
+                        }
                         Err(_) => {
                             panic!("attempted to access out of bounds")
                         }
                     }
                 }
-            },
-            _ => () //if we are here, the move is either a JHook, which is allowed to jump, or illegal,
+            }
+            _ => (), //if we are here, the move is either a JHook, which is allowed to jump, or illegal,
         }
 
         path_clear
@@ -983,45 +1304,110 @@ impl Board {
 
     fn update_king_location(&mut self, coords: Coordinates, king_color: PieceColor) {
         match king_color {
-            PieceColor::Black => self.black_side_information.update_king_location(&coords.letter, &coords.number),
-            PieceColor::White => self.white_side_information.update_king_location(&coords.letter, &coords.number),
+            PieceColor::Black => self
+                .black_side_information
+                .update_king_location(&coords.letter, &coords.number),
+            PieceColor::White => self
+                .white_side_information
+                .update_king_location(&coords.letter, &coords.number),
         }
     }
 
     fn castle(&mut self, king_color: PieceColor, is_kingside: bool) {
         let row_number = match king_color {
-            PieceColor::White => 1, 
-            PieceColor::Black => 8
+            PieceColor::White => 1,
+            PieceColor::Black => 8,
         };
-        let opt_pulled_king = self.retreive_square(&Coordinates{letter: ColumnLetter::E, number: row_number}).clone();
-        let opt_pulled_rook = match is_kingside { 
-            true => self.retreive_square(&Coordinates{letter: ColumnLetter::H, number: row_number}).clone(), 
-            false => self.retreive_square(&Coordinates{letter: ColumnLetter::A, number: row_number}).clone()
+        let opt_pulled_king = self
+            .retreive_square(&Coordinates {
+                letter: ColumnLetter::E,
+                number: row_number,
+            })
+            .clone();
+        let opt_pulled_rook = match is_kingside {
+            true => self
+                .retreive_square(&Coordinates {
+                    letter: ColumnLetter::H,
+                    number: row_number,
+                })
+                .clone(),
+            false => self
+                .retreive_square(&Coordinates {
+                    letter: ColumnLetter::A,
+                    number: row_number,
+                })
+                .clone(),
         };
         let empty_square = Square::Empty;
 
         match opt_pulled_king {
-            Ok(pulled_king) => {
-                match opt_pulled_rook {
-                    Ok(pulled_rook) => {
-                        match is_kingside {
-                            true => {
-                                self.set_square(&Coordinates{letter: ColumnLetter::H, number: row_number}, empty_square);
-                                self.set_square(&Coordinates{letter: ColumnLetter::E, number: row_number}, empty_square);
-                                self.set_square(&Coordinates{letter: ColumnLetter::G, number: row_number}, pulled_king);
-                                self.set_square(&Coordinates{letter: ColumnLetter::F, number: row_number}, pulled_rook);
-                            },
-                            false => {
-                                self.set_square(&Coordinates{letter: ColumnLetter::A, number: row_number}, empty_square);
-                                self.set_square(&Coordinates{letter: ColumnLetter::E, number: row_number}, empty_square);
-                                self.set_square(&Coordinates{letter: ColumnLetter::C, number: row_number}, pulled_king);
-                                self.set_square(&Coordinates{letter: ColumnLetter::D, number: row_number}, pulled_rook);
-                            }
-                        };
-                    },
-                    Err(_) => {
-                        panic!("attempted to castle, but could not retreive rook")
-                    }
+            Ok(pulled_king) => match opt_pulled_rook {
+                Ok(pulled_rook) => {
+                    match is_kingside {
+                        true => {
+                            self.set_square(
+                                &Coordinates {
+                                    letter: ColumnLetter::H,
+                                    number: row_number,
+                                },
+                                empty_square,
+                            );
+                            self.set_square(
+                                &Coordinates {
+                                    letter: ColumnLetter::E,
+                                    number: row_number,
+                                },
+                                empty_square,
+                            );
+                            self.set_square(
+                                &Coordinates {
+                                    letter: ColumnLetter::G,
+                                    number: row_number,
+                                },
+                                pulled_king,
+                            );
+                            self.set_square(
+                                &Coordinates {
+                                    letter: ColumnLetter::F,
+                                    number: row_number,
+                                },
+                                pulled_rook,
+                            );
+                        }
+                        false => {
+                            self.set_square(
+                                &Coordinates {
+                                    letter: ColumnLetter::A,
+                                    number: row_number,
+                                },
+                                empty_square,
+                            );
+                            self.set_square(
+                                &Coordinates {
+                                    letter: ColumnLetter::E,
+                                    number: row_number,
+                                },
+                                empty_square,
+                            );
+                            self.set_square(
+                                &Coordinates {
+                                    letter: ColumnLetter::C,
+                                    number: row_number,
+                                },
+                                pulled_king,
+                            );
+                            self.set_square(
+                                &Coordinates {
+                                    letter: ColumnLetter::D,
+                                    number: row_number,
+                                },
+                                pulled_rook,
+                            );
+                        }
+                    };
+                }
+                Err(_) => {
+                    panic!("attempted to castle, but could not retreive rook")
                 }
             },
             Err(_) => {
@@ -1030,7 +1416,12 @@ impl Board {
         }
     }
 
-    pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates, opt_previous_turn_board: Option<&Board>) -> MoveResult {
+    pub fn move_piece(
+        &mut self,
+        from: &Coordinates,
+        to: &Coordinates,
+        opt_previous_turn_board: Option<&Board>,
+    ) -> MoveResult {
         let move_result: MoveResult;
         let opt_from_square = self.retreive_square(&from);
         match opt_from_square {
@@ -1039,7 +1430,15 @@ impl Board {
                 match from_square {
                     Square::Full(piece) => {
                         if piece.color == self.turn {
-                            let (move_legal, taking_piece, target_piece_color, target_piece_kind, move_direction, move_distance, opt_passant_target) = parse_move_legality(from, to, self, opt_previous_turn_board);
+                            let (
+                                move_legal,
+                                taking_piece,
+                                target_piece_color,
+                                target_piece_kind,
+                                move_direction,
+                                move_distance,
+                                opt_passant_target,
+                            ) = parse_move_legality(from, to, self, opt_previous_turn_board);
 
                             if move_legal {
                                 // if we're moving the king we need to update his coords
@@ -1054,7 +1453,7 @@ impl Board {
                                             }
                                         }
                                         self.update_king_location(*from, piece.color);
-                                    },
+                                    }
                                     PieceKind::Rook => {
                                         // we need to check if they're moving off their original square, and negate castling rights as necessary.
                                         if from.letter == ColumnLetter::A {
@@ -1064,7 +1463,7 @@ impl Board {
                                         } else if from.letter == ColumnLetter::H {
                                             self.remove_castling_rights(piece.color, true);
                                         }
-                                    },
+                                    }
                                     _ => {}
                                 }
                                 self.set_square(&from, Square::Empty);
@@ -1072,7 +1471,7 @@ impl Board {
                                 match opt_passant_target {
                                     Some(passant_target) => {
                                         self.set_square(&passant_target, Square::Empty);
-                                    },
+                                    }
                                     None => {}
                                 }
                                 if taking_piece {
@@ -1080,33 +1479,37 @@ impl Board {
                                 }
                                 match self.turn {
                                     PieceColor::Black => self.turn = PieceColor::White,
-                                    PieceColor::White => self.turn = PieceColor::Black
+                                    PieceColor::White => self.turn = PieceColor::Black,
                                 }
                                 let opponent_color = match piece.color {
                                     PieceColor::Black => PieceColor::White,
-                                    PieceColor::White => PieceColor::Black
+                                    PieceColor::White => PieceColor::Black,
                                 };
                                 //we can make the move they are requesting. Lets check what state this leaves the board in.
-                                match king_checkmate_state(opponent_color, &self, opt_previous_turn_board) {
-                                    MateState::Check => {
-                                        match opponent_color {
-                                            PieceColor::Black => {
-                                                move_result = MoveResult::BlackKingChecked;
-                                            },
-                                            PieceColor::White => {
-                                                move_result = MoveResult::WhiteKingChecked;
-                                            }
+                                match king_checkmate_state(
+                                    opponent_color,
+                                    &self,
+                                    opt_previous_turn_board,
+                                ) {
+                                    MateState::Check => match opponent_color {
+                                        PieceColor::Black => {
+                                            move_result = MoveResult::BlackKingChecked;
                                         }
-                                    }
-                                    MateState::CheckMate => {
-                                        match opponent_color {
-                                            PieceColor::Black => {move_result = MoveResult::BlackKingCheckmated},
-                                            PieceColor::White => {move_result = MoveResult::WhiteKingCheckmated}
+                                        PieceColor::White => {
+                                            move_result = MoveResult::WhiteKingChecked;
+                                        }
+                                    },
+                                    MateState::CheckMate => match opponent_color {
+                                        PieceColor::Black => {
+                                            move_result = MoveResult::BlackKingCheckmated
+                                        }
+                                        PieceColor::White => {
+                                            move_result = MoveResult::WhiteKingCheckmated
                                         }
                                     },
                                     MateState::StaleMate => {
                                         move_result = MoveResult::Stalemate;
-                                    },
+                                    }
                                     MateState::Safe => {
                                         move_result = MoveResult::CompletedSafely;
                                     }
@@ -1117,12 +1520,12 @@ impl Board {
                         } else {
                             move_result = MoveResult::WrongTurn;
                         }
-                        }, //
-                    Square::Empty => { 
+                    } //
+                    Square::Empty => {
                         move_result = MoveResult::EmptySquare;
                     }
                 }
-            },
+            }
             Err(_) => {
                 move_result = MoveResult::MoveIllegal;
             }
@@ -1145,7 +1548,7 @@ impl Board {
                 for piece in self.black_side_information.taken_pieces.iter() {
                     print!("{} ", piece);
                 }
-            },
+            }
             PieceColor::White => {
                 for piece in self.white_side_information.taken_pieces.iter() {
                     print!("{} ", piece);
@@ -1179,7 +1582,7 @@ impl fmt::Display for Board {
             print!("[{} ]", letter)
         }
         self.show_taken_pieces(PieceColor::White);
-        if !black_winning && !score_equal{
+        if !black_winning && !score_equal {
             println!("+{}", white_score - black_score);
         }
         println!("");

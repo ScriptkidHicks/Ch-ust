@@ -1,11 +1,11 @@
-mod play_structure;
+mod base_tools;
 mod board;
+mod fen_parser;
+mod interface;
 mod pieces;
+mod play_structure;
 mod rules;
 mod unit_tests;
-mod base_tools;
-mod interface;
-mod fen_parser;
 
 use play_structure::run_chess_interface;
 fn main() {
