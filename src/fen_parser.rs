@@ -1,7 +1,7 @@
-use std::{fs, path::Path};
+use std::{convert, f32::RADIX, fs, path::Path};
 
 use crate::{
-    board::{Board, Row},
+    board::{Board, Row, Square},
     pieces::{Piece, PieceColor, PieceKind},
 };
 
@@ -11,7 +11,7 @@ pub fn ingest_fen_file(file_path: &str) -> Option<Board> {
     if path_exists(file_path) {
         match digest_filepath_to_string(file_path) {
             Some(string_result) => {
-                match parse_string_to_board(string_result) {
+                match digest_string_to_board(string_result) {
                     Some(board) => {
                         board_result = Some(board);
                     }
@@ -40,20 +40,123 @@ pub fn digest_filepath_to_string(file_path: &str) -> Option<String> {
     }
 }
 
-pub fn parse_string_to_board(file_contents: String) -> Option<Board> {
+pub fn digest_string_to_board(file_contents: String) -> Option<Board> {
     let mut opt_board_return: Option<Board> = None;
     let mut accum_rows: Vec<Row> = Vec::new();
+    let turn_color: PieceColor;
+    let white_castle_kingside: bool;
+    let white_castle_queenside: bool;
+    let black_castle_kingside: bool;
+    let black_castle_queenside: bool;
 
-    let string_parts = file_contents.split(' ');
+    let string_parts = file_contents.split(' ').collect::<Vec<&str>>();
 
-    for character in file_contents.chars() {}
+    println!("number of string parts {}", string_parts.len());
 
-    if (accum_rows.len() == 8) {}
+    //There must be exactly six parts.
+    if (string_parts.len() != 6) {
+        return None;
+    }
+
+    // the 0th string will always be the rows
+    digest_board_string_into_rows(string_parts.get(0), &mut accum_rows);
+
+    //the 1s position string will always be whose turn it is
+    match parse_char_to_turn_color(string_parts.get(1)) {
+        Some(turn) => {}
+        None => {
+            return None;
+        }
+    }
+
+    //the 2nd position string will always be castling rights
+    match string_parts.get(2) {
+        Some(reference_string) => {
+            (
+                white_castle_kingside,
+                white_castle_queenside,
+                black_castle_kingside,
+                black_castle_queenside,
+            ) = parse_string_to_castling_rights(reference_string);
+        }
+        None => {
+            return None;
+        }
+    }
 
     opt_board_return
 }
 
-pub fn fen_parsing_switchboard(rows: &mut Vec<Row>) {}
+pub fn digest_board_string_into_rows(opt_row_text: Option<&&str>, row_collection: &mut Vec<Row>) {
+    match opt_row_text {
+        Some(row_text) => {
+            let row_strings = row_text.split("/").collect::<Vec<&str>>();
+            if (row_strings.len() != 8) {
+                return; // return early. You should have exactly 8 of these suckers.
+            }
+
+            for row_string in row_strings.iter() {
+                match digest_row_string_to_row(row_string) {
+                    Some(row) => {
+                        row_collection.push(row);
+                    }
+                    None => {
+                        // if you failed to add the row, return early.
+                        return;
+                    }
+                }
+            }
+        }
+        None => {
+            //dawg what?
+        }
+    }
+}
+
+pub fn digest_row_string_to_row(row_string: &&str) -> Option<Row> {
+    let mut squares: Vec<Square> = Vec::new();
+
+    let mut opt_row: Option<Row> = None;
+
+    for character in row_string.chars() {
+        if character.is_numeric() {
+            //this is in base 10. If you want to go look up what a radix is, I recommend
+            //https://doc.rust-lang.org/std/primitive.char.html#method.to_digit
+            match character.to_digit(10) {
+                Some(digit) => {
+                    for _ in 0..digit {
+                        //on christ, I am going to go put a pull request into rust to fix this bullshit.
+                        squares.push(Square::Empty);
+                    }
+                }
+                None => {
+                    //break early. You passed an illegal digit I guess? How?
+                    println!("the character {} was found while trying to parse a fen file for a digit. Sorry.", character);
+                    return None;
+                }
+            }
+        } else if character.is_alphabetic() {
+            match parse_char_to_piece(character) {
+                Some(piece) => {
+                    squares.push(Square::Full(piece));
+                }
+                None => {
+                    return None;
+                }
+            }
+        }
+    }
+
+    if (squares.len() == 8) {
+        let squares_array: [Square; 8] = squares.try_into().expect(
+            "Something appears to have converted incorrectly in converting this row to squares",
+        );
+
+        opt_row = Some(Row::new(squares_array));
+    }
+
+    opt_row
+}
 
 pub fn parse_char_to_piecekind(input_char: char) -> Option<PieceKind> {
     match input_char {
@@ -67,12 +170,26 @@ pub fn parse_char_to_piecekind(input_char: char) -> Option<PieceKind> {
     }
 }
 
-pub fn parse_char_to_turn_color(input_char: char) -> Option<PieceColor> {
-    match input_char.to_ascii_lowercase() {
-        'b' => Some(PieceColor::Black),
-        'w' => Some(PieceColor::White),
-        _ => None,
+pub fn parse_char_to_turn_color(opt_turn_char: Option<&&str>) -> Option<PieceColor> {
+    let mut opt_piece_color: Option<PieceColor> = None;
+    match opt_turn_char {
+        Some(turn_string) => {
+            if (turn_string.len() != 1) {
+                return None;
+            }
+
+            for char in turn_string.chars() {
+                match char.to_ascii_lowercase() {
+                    'b' => opt_piece_color = Some(PieceColor::Black),
+                    'w' => opt_piece_color = Some(PieceColor::White),
+                    _ => {}
+                }
+            }
+        }
+        None => {}
     }
+
+    opt_piece_color
 }
 
 pub fn parse_char_to_piece(input_char: char) -> Option<Piece> {
@@ -92,7 +209,7 @@ pub fn parse_char_to_piece(input_char: char) -> Option<Piece> {
     }
 }
 
-pub fn parse_string_to_castling_rights(input_str: &str) -> (bool, bool, bool, bool) {
+pub fn parse_string_to_castling_rights(input_str: &&str) -> (bool, bool, bool, bool) {
     let mut black_kingside = false;
     let mut black_queenside = false;
     let mut white_kingside = false;
