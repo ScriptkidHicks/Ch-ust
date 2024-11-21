@@ -130,20 +130,34 @@ pub fn parse_move_legality(
                                                 match from_piece.color {
                                                     PieceColor::Black => {
                                                         if move_information.distance == 2
-                                                            && move_information.move_direction
-                                                                == MoveDirection::DownLeft
-                                                            || move_information.move_direction
-                                                                == MoveDirection::DownRight
+                                                            && match move_information.move_direction {
+                                                                MoveDirection::Diagonal(some_diagonal) => {
+                                                                    match some_diagonal {
+                                                                        DiagonalDirection::DownLeft | DiagonalDirection::DownRight => true,
+                                                                        _ => false
+                                                                    }
+                                                                },
+                                                                _ => false
+                                                            }
                                                         {
                                                             successful = true;
                                                         }
                                                     }
                                                     PieceColor::White => {
                                                         if move_information.distance == 2
-                                                            && move_information.move_direction
-                                                                == MoveDirection::UpLeft
-                                                            || move_information.move_direction
-                                                                == MoveDirection::UpRight
+                                                            && match move_information.move_direction
+                                                            {
+                                                                MoveDirection::Diagonal(
+                                                                    some_diagonal,
+                                                                ) => match some_diagonal {
+                                                                    DiagonalDirection::UpLeft
+                                                                    | DiagonalDirection::UpRight => {
+                                                                        true
+                                                                    }
+                                                                    _ => false,
+                                                                },
+                                                                _ => false,
+                                                            }
                                                         {
                                                             successful = true;
                                                         }
@@ -193,10 +207,7 @@ pub fn parse_move_legality(
                                                                 }
                                                             }
                                                         }
-                                                        MoveDirection::DownLeft
-                                                        | MoveDirection::DownRight
-                                                        | MoveDirection::UpLeft
-                                                        | MoveDirection::UpRight => {
+                                                        MoveDirection::Diagonal(_) => {
                                                             successful =
                                                                 passant_legal(to, chess_board);
 
@@ -238,10 +249,9 @@ pub fn parse_move_legality(
                                         }
                                         PieceKind::Bishop => {
                                             match move_information.move_direction {
-                                                MoveDirection::DownLeft
-                                                | MoveDirection::DownRight
-                                                | MoveDirection::UpLeft
-                                                | MoveDirection::UpRight => successful = true,
+                                                MoveDirection::Diagonal(
+                                                    _, /*we allow any diagonal */
+                                                ) => successful = true,
                                                 _ => (),
                                             };
                                         }

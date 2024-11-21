@@ -100,15 +100,56 @@ impl fmt::Display for ColumnLetter {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
+pub enum DiagonalDirection {
+    UpLeft,
+    UpRight,
+    DownLeft,
+    DownRight,
+}
+
+impl DiagonalDirection {
+    pub fn conditional_continue(&self, letter_value: isize, number_value: isize) -> bool {
+        match self {
+            Self::DownLeft => letter_value > 0 && number_value > 1,
+            Self::DownRight => letter_value < 7 && number_value > 1,
+            Self::UpLeft => letter_value > 0 && number_value < 7,
+            Self::UpRight => letter_value < 7 && number_value < 7,
+        }
+    }
+
+    pub fn modify_letter_and_number_values(
+        &self,
+        letter_value: &mut isize,
+        number_value: &mut isize,
+    ) {
+        match self {
+            Self::DownLeft => {
+                *letter_value -= 1;
+                *number_value -= 1;
+            }
+            Self::DownRight => {
+                *letter_value += 1;
+                *number_value -= 1;
+            }
+            Self::UpLeft => {
+                *letter_value -= 1;
+                *number_value += 1;
+            }
+            Self::UpRight => {
+                *letter_value += 1;
+                *number_value += 1;
+            }
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum MoveDirection {
     Up,
     Down,
     Left,
     Right,
-    UpRight,
-    UpLeft,
-    DownLeft,
-    DownRight,
+    Diagonal(DiagonalDirection),
     JHook,
     NoMove,
     IllegalMove,
@@ -122,10 +163,12 @@ impl fmt::Display for MoveDirection {
             Self::Right => write!(f, "Right"),
             Self::Left => write!(f, "Left"),
             Self::JHook => write!(f, "JHook"),
-            Self::DownLeft => write!(f, "Down Left"),
-            Self::DownRight => write!(f, "Down Right"),
-            Self::UpLeft => write!(f, "Up Left"),
-            Self::UpRight => write!(f, "Up Right"),
+            Self::Diagonal(diag) => match diag {
+                DiagonalDirection::DownLeft => write!(f, "Down Left"),
+                DiagonalDirection::DownRight => write!(f, "Down Right"),
+                DiagonalDirection::UpLeft => write!(f, "Up Left"),
+                DiagonalDirection::UpRight => write!(f, "Up Right"),
+            },
             Self::IllegalMove => write!(f, "Illegal Move"),
             Self::NoMove => write!(f, "No Move"),
         }
@@ -190,16 +233,16 @@ pub fn measure_distance(from: &Coordinates, to: &Coordinates) -> SquareToSquareI
             if from.number > to.number {
                 // we know the move is down.
                 if from.letter.eval() > to.letter.eval() {
-                    garnered_move_direction = MoveDirection::DownLeft;
+                    garnered_move_direction = MoveDirection::Diagonal(DiagonalDirection::DownLeft);
                 } else {
-                    garnered_move_direction = MoveDirection::DownRight;
+                    garnered_move_direction = MoveDirection::Diagonal(DiagonalDirection::DownRight);
                 }
             } else {
                 // we know the move is up.
                 if from.letter.eval() > to.letter.eval() {
-                    garnered_move_direction = MoveDirection::UpLeft;
+                    garnered_move_direction = MoveDirection::Diagonal(DiagonalDirection::UpLeft);
                 } else {
-                    garnered_move_direction = MoveDirection::UpRight;
+                    garnered_move_direction = MoveDirection::Diagonal(DiagonalDirection::UpRight);
                 }
             }
         } else if (lat_distance == 1 && vert_distance == 2)
@@ -214,49 +257,6 @@ pub fn measure_distance(from: &Coordinates, to: &Coordinates) -> SquareToSquareI
     SquareToSquareInformation {
         move_direction: garnered_move_direction,
         distance: lat_distance + vert_distance,
-    }
-}
-
-pub enum DiagonalDirection {
-    UpLeft,
-    UpRight,
-    DownLeft,
-    DownRight,
-}
-
-impl DiagonalDirection {
-    pub fn conditional_continue(&self, letter_value: isize, number_value: isize) -> bool {
-        match self {
-            Self::DownLeft => letter_value > 0 && number_value > 1,
-            Self::DownRight => letter_value < 7 && number_value > 1,
-            Self::UpLeft => letter_value > 0 && number_value < 7,
-            Self::UpRight => letter_value < 7 && number_value < 7,
-        }
-    }
-
-    pub fn modify_letter_and_number_values(
-        &self,
-        letter_value: &mut isize,
-        number_value: &mut isize,
-    ) {
-        match self {
-            Self::DownLeft => {
-                *letter_value -= 1;
-                *number_value -= 1;
-            }
-            Self::DownRight => {
-                *letter_value += 1;
-                *number_value -= 1;
-            }
-            Self::UpLeft => {
-                *letter_value -= 1;
-                *number_value += 1;
-            }
-            Self::UpRight => {
-                *letter_value += 1;
-                *number_value += 1;
-            }
-        }
     }
 }
 
@@ -1174,7 +1174,7 @@ impl Board {
                     }
                 }
             }
-            MoveDirection::DownLeft => {
+            MoveDirection::Diagonal(DiagonalDirection::DownLeft) => {
                 let distance = from_letter_value - to_letter_value;
                 for i in 1..distance {
                     match ColumnLetter::construct_letter_from_isize(from_letter_value - i) {
@@ -1195,7 +1195,7 @@ impl Board {
                     }
                 }
             }
-            MoveDirection::DownRight => {
+            MoveDirection::Diagonal(DiagonalDirection::DownRight) => {
                 let distance = to_letter_value - from_letter_value;
                 for i in 1..distance {
                     match ColumnLetter::construct_letter_from_isize(from_letter_value + i) {
@@ -1216,7 +1216,7 @@ impl Board {
                     }
                 }
             }
-            MoveDirection::UpLeft => {
+            MoveDirection::Diagonal(DiagonalDirection::UpLeft) => {
                 let distance = to_number_value - from_number_value;
                 for i in 1..distance {
                     match ColumnLetter::construct_letter_from_isize(from_letter_value - i) {
@@ -1237,7 +1237,7 @@ impl Board {
                     }
                 }
             }
-            MoveDirection::UpRight => {
+            MoveDirection::Diagonal(DiagonalDirection::UpRight) => {
                 let distance = to_letter_value - from_letter_value;
                 for i in 1..distance {
                     // we can rely on the distance being equal, otherwise the move is illegal.
