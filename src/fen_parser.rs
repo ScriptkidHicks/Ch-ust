@@ -22,9 +22,14 @@ pub fn ingest_fen_file(file_path: &str) -> Option<Board> {
                 }
             }
             None => {
-                println!("Oops! looks like we couldn't get a string from that file");
+                println!(
+                    "Oops! looks like we couldn't get a string from {}",
+                    file_path
+                );
             }
         }
+    } else {
+        println!("It looks like the file {} does exist!", file_path);
     }
 
     board_result
@@ -42,7 +47,7 @@ pub fn digest_filepath_to_string(file_path: &str) -> Option<String> {
 }
 
 pub fn digest_string_to_board(file_contents: String) -> Option<Board> {
-    let mut opt_board_return: Option<Board> = None;
+    let opt_board_return: Option<Board>;
     let mut accum_rows: Vec<Row> = Vec::new();
     let turn_color: PieceColor;
     let white_castle_kingside: bool;
@@ -135,12 +140,18 @@ pub fn digest_string_to_board(file_contents: String) -> Option<Board> {
         "Something appears to have incorrectly converted in moving accumulated rows to an array",
     );
 
+    let mut white_information = SideInformation::default(PieceColor::White);
+    white_information.set_castling_rights(white_castle_kingside, white_castle_queenside);
+
+    let mut black_information = SideInformation::default(PieceColor::Black);
+    black_information.set_castling_rights(black_castle_kingside, black_castle_queenside);
+
     Some(Board::new(
         rows_as_array,
         turn_color,
         opt_passant_square,
-        SideInformation::default(PieceColor::White),
-        SideInformation::default(PieceColor::Black),
+        white_information,
+        black_information,
         half_turns,
         full_turns,
     ))

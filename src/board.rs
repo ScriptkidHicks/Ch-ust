@@ -642,12 +642,21 @@ pub struct SideInformation {
     current_king_square: Coordinates,
 }
 
+impl fmt::Display for SideInformation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "kingside castling: {:?}\n", self.can_castle_kingside);
+        write!(f, "queenside castling: {:?}\n", self.can_castle_queenside);
+        println!("king location: {}", self.current_king_square);
+        Ok(())
+    }
+}
+
 impl SideInformation {
     pub fn default(king_color: PieceColor) -> Self {
         SideInformation {
             taken_pieces: Vec::new(),
             can_castle_kingside: true,
-            can_castle_queenside: false,
+            can_castle_queenside: true,
             current_king_square: Coordinates {
                 letter: ColumnLetter::E,
                 number: match king_color {
@@ -656,6 +665,11 @@ impl SideInformation {
                 },
             },
         }
+    }
+
+    pub fn set_castling_rights(&mut self, kingside: bool, queenside: bool) {
+        self.can_castle_kingside = kingside;
+        self.can_castle_queenside = queenside;
     }
 
     pub fn add_taken_piece(&mut self, piece_kind: PieceKind) {
@@ -767,6 +781,13 @@ impl Board {
             half_turns: input_half_turns,
             full_turns: input_full_turns,
         }
+    }
+
+    pub fn display_sides_information(&self) {
+        println!("White Side:");
+        println!("{}", self.white_side_information);
+        println!("Black Side");
+        println!("{}", self.black_side_information);
     }
 
     pub fn get_turn(&self) -> PieceColor {

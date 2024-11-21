@@ -304,8 +304,14 @@ pub fn test_en_passant_should_pass() {
 
 #[test]
 fn test_basic_read() {
-    println!("RUNNING TEST BASIC READ");
     let result = ingest_fen_file("./src/fenFiles/default_board.fen");
-
-    assert!(result == Some(Board::default()));
+    match result {
+        Some(board) => {
+            let default_board = Board::default();
+            assert!(board == default_board);
+        }
+        None => {
+            assert!(false)
+        }
+    }
 }

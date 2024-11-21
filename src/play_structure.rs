@@ -1,14 +1,18 @@
 use std::io::stdin;
 
 use crate::{
-    base_tools::alienify_output_text, board::*, interface::parse_square, pieces::PieceColor,
+    base_tools::alienify_output_text, board::*, fen_parser::ingest_fen_file,
+    interface::parse_square, pieces::PieceColor,
 };
 
-fn play_chess() {
+fn play_chess(opt_board_input: Option<Board>) {
     let white_turn_string = "WHITE TO MOVE";
     let black_turn_string = "BLACK TO MOVE";
     let mut game_not_over = true;
-    let mut current_board = Board::default();
+    let mut current_board = match opt_board_input {
+        Some(board) => board,
+        None => Board::default(),
+    };
     let mut board_states: Vec<Board> = Vec::new();
     while game_not_over {
         let turn_string = if current_board.get_turn() == PieceColor::White {
@@ -251,7 +255,8 @@ pub fn run_chess_interface() {
     while should_keep_running {
         alienify_output_text("Please enter a selection:");
         alienify_output_text("1: Play Chess");
-        alienify_output_text("2: Exit");
+        alienify_output_text("2: Import Fen File");
+        alienify_output_text("3: Exit");
 
         let mut indication = String::new();
 
@@ -269,9 +274,12 @@ pub fn run_chess_interface() {
 
         match indication_number {
             1 => {
-                play_chess();
+                play_chess(None);
             }
             2 => {
+                handle_fen_import();
+            }
+            3 => {
                 println!("Goodbye!");
                 should_keep_running = false;
             }
@@ -279,5 +287,60 @@ pub fn run_chess_interface() {
                 alienify_output_text("Hey friend, I think you entered an invalid number");
             }
         };
+    }
+}
+
+pub fn handle_fen_import() {
+    loop {
+        alienify_output_text("Please input a path for a fen file:");
+        let mut indication = String::new();
+
+        stdin()
+            .read_line(&mut indication)
+            .expect("Failed to read line");
+
+        let indication = indication.trim(); //need to remove the newline that will occur on input.
+
+        match ingest_fen_file(indication) {
+            Some(board) => {
+                println!("the board exists");
+                loop {
+                    alienify_output_text("Would you like to play a game with this board?");
+                    alienify_output_text("1: Start playing");
+                    alienify_output_text("2: Exit");
+
+                    let mut selection = String::new();
+
+                    stdin()
+                        .read_line(&mut selection)
+                        .expect("Failed to read line.");
+
+                    let selection_number: u32 = match selection.trim().parse() {
+                        Ok(num) => num,
+                        Err(_) => {
+                            println!("It appears you entered something that wasn't a positive integer. Oops!");
+                            continue;
+                        }
+                    };
+
+                    match selection_number {
+                        1 => {
+                            play_chess(Some(board));
+                            break;
+                        }
+                        2 => {
+                            break;
+                        }
+                        _ => {
+                            alienify_output_text("Oops! That number wasn't one of the options.");
+                        }
+                    }
+                }
+                break;
+            }
+            None => {
+                //inget fen file will handle telling the user about what went wrong.
+            }
+        }
     }
 }

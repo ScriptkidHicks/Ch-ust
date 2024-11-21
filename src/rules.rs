@@ -40,34 +40,6 @@ pub fn would_king_be_in_danger(board: Board, from: &Coordinates, to: &Coordinate
     }
 }
 
-fn square_meets_expectations(
-    board: &Board,
-    target_coords: &Coordinates,
-    should_be_empty: bool,
-    expected_piece_color: PieceColor,
-    expected_piece_kind: PieceKind,
-) -> bool {
-    let meets_expectations: bool;
-
-    match board.retreive_square(target_coords) {
-        Ok(square) => match square {
-            Square::Full(piece) => {
-                meets_expectations = !should_be_empty
-                    && (piece.color == expected_piece_color)
-                    && (piece.kind == expected_piece_kind);
-            }
-            Square::Empty => {
-                meets_expectations = should_be_empty;
-            }
-        },
-        Err(_) => {
-            panic!("Tried to retreive nonexistant square in square_meets_expectations")
-        }
-    }
-
-    meets_expectations
-}
-
 pub fn passant_legal(to: &Coordinates, board: &Board) -> bool {
     match board.get_opt_passant_square() {
         Some(passant_square) => *to == passant_square,
