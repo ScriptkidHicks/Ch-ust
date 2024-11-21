@@ -54,7 +54,7 @@ fn play_chess() {
                 _ => {}
             },
             2 => {
-                query_legal_squares(&current_board, board_states.last());
+                query_legal_squares(&current_board);
             }
             3 => {
                 if not_first_turn {
@@ -188,8 +188,7 @@ fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Board>)
             match parse_square(&indication[0..2]) {
                 Ok(from) => match parse_square(&indication[3..5]) {
                     Ok(to) => {
-                        let previous_board = board_states.last();
-                        final_result = current_board.move_piece(&from, &to, previous_board);
+                        final_result = current_board.move_piece(&from, &to);
                         match final_result {
                             MoveResult::CompletedSafely => {
                                 board_states.push(previous_turn_board);
@@ -219,7 +218,7 @@ fn move_piece_on_board(current_board: &mut Board, board_states: &mut Vec<Board>)
     final_result
 }
 
-pub fn query_legal_squares(current_board: &Board, opt_previous_turn_board: Option<&Board>) {
+pub fn query_legal_squares(current_board: &Board) {
     loop {
         println!("Please enter coordinates, or X to quit:");
 
@@ -236,7 +235,7 @@ pub fn query_legal_squares(current_board: &Board, opt_previous_turn_board: Optio
         match parse_square(&indication[0..2]) {
             Ok(coordinates) => {
                 alienify_output_text("Legal Moves: ");
-                current_board.show_me_legal_squares(&coordinates, opt_previous_turn_board);
+                current_board.show_me_legal_squares(&coordinates);
                 break;
             }
             Err(_) => alienify_output_text(

@@ -1,7 +1,8 @@
 use std::{convert, f32::RADIX, fs, path::Path};
 
 use crate::{
-    board::{Board, Row, Square},
+    board::{Board, ColumnLetter, Coordinates, Row, SideInformation, Square},
+    interface::parse_char_to_isize,
     pieces::{Piece, PieceColor, PieceKind},
 };
 
@@ -48,10 +49,11 @@ pub fn digest_string_to_board(file_contents: String) -> Option<Board> {
     let white_castle_queenside: bool;
     let black_castle_kingside: bool;
     let black_castle_queenside: bool;
+    let mut opt_passant_square: Option<Coordinates> = None;
+    let half_turns: u32;
+    let full_turns: u32;
 
     let string_parts = file_contents.split(' ').collect::<Vec<&str>>();
-
-    println!("number of string parts {}", string_parts.len());
 
     //There must be exactly six parts.
     if (string_parts.len() != 6) {
@@ -63,7 +65,9 @@ pub fn digest_string_to_board(file_contents: String) -> Option<Board> {
 
     //the 1s position string will always be whose turn it is
     match parse_char_to_turn_color(string_parts.get(1)) {
-        Some(turn) => {}
+        Some(turn) => {
+            turn_color = turn;
+        }
         None => {
             return None;
         }
@@ -84,7 +88,62 @@ pub fn digest_string_to_board(file_contents: String) -> Option<Board> {
         }
     }
 
-    opt_board_return
+    //deriving the optional passant square
+    match string_parts.get(3) {
+        Some(passant_string) => {
+            opt_passant_square = parse_string_into_passant_square(passant_string);
+        }
+        None => {
+            return None;
+        }
+    }
+
+    //get the half turns
+    match string_parts.get(4) {
+        Some(half_turn_string) => match half_turn_string.parse::<u32>() {
+            Ok(half_turns_found) => {
+                half_turns = half_turns_found;
+            }
+            Err(_) => {
+                println!("Could not correctly parse half turns.");
+                return None;
+            }
+        },
+        None => {
+            return None;
+        }
+    }
+
+    //get the full turns
+    match string_parts.get(5) {
+        Some(full_turn_string) => match full_turn_string.parse::<u32>() {
+            Ok(full_turns_found) => {
+                full_turns = full_turns_found;
+            }
+            Err(_) => {
+                println!("Could not correctly parse half turns.");
+                return None;
+            }
+        },
+        None => {
+            return None;
+        }
+    }
+
+    //if we have reached here we can return safely
+    let rows_as_array: [Row; 8] = accum_rows.try_into().expect(
+        "Something appears to have incorrectly converted in moving accumulated rows to an array",
+    );
+
+    Some(Board::new(
+        rows_as_array,
+        turn_color,
+        opt_passant_square,
+        SideInformation::default(PieceColor::White),
+        SideInformation::default(PieceColor::Black),
+        half_turns,
+        full_turns,
+    ))
 }
 
 pub fn digest_board_string_into_rows(opt_row_text: Option<&&str>, row_collection: &mut Vec<Row>) {
@@ -233,4 +292,56 @@ pub fn parse_string_to_castling_rights(input_str: &&str) -> (bool, bool, bool, b
         black_kingside,
         black_queenside,
     )
+}
+
+pub fn parse_string_into_passant_square(input_str: &&str) -> Option<Coordinates> {
+    let mut opt_coordinates: Option<Coordinates> = None;
+    let mut opt_col_letter: Option<ColumnLetter> = None;
+    let mut opt_row_number: Option<isize> = None;
+
+    if input_str.len() > 2 {
+        println!("Encountered an error while attempting to parse the viable en-passant square. String was the wrong size.");
+        return None;
+    }
+
+    for char in input_str.chars() {
+        if char.is_alphabetic() {
+            match ColumnLetter::convert_to(char) {
+                Ok(column_letter) => {
+                    opt_col_letter = Some(column_letter);
+                }
+                Err(_) => {
+                    return None;
+                }
+            }
+        } else if char.is_numeric() {
+            //see earlier where we use radix for an explanation
+            match parse_char_to_isize(char) {
+                Ok(size_result) => {
+                    opt_row_number = Some(size_result);
+                }
+                Err(_) => {
+                    println!("Digit was outside the bounds fo the board in parse passant string");
+                    return None;
+                }
+            }
+        } else if char == '-' {
+            return None;
+        }
+    }
+
+    match opt_col_letter {
+        Some(col_let) => match opt_row_number {
+            Some(row_num) => {
+                opt_coordinates = Some(Coordinates {
+                    letter: col_let,
+                    number: row_num,
+                });
+            }
+            None => {}
+        },
+        None => {}
+    }
+
+    opt_coordinates
 }

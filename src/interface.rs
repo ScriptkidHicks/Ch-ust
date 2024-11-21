@@ -1,6 +1,6 @@
 use crate::board::*;
 
-fn parse_char_to_int(row_number: char) -> Result<isize, &'static str> {
+pub fn parse_char_to_isize(row_number: char) -> Result<isize, &'static str> {
     match row_number {
         '1' => Ok(1),
         '2' => Ok(2),
@@ -31,7 +31,7 @@ pub fn parse_square(input_string: &str) -> Result<Coordinates, &'static str> {
             }
         }
 
-        match parse_char_to_int(input_string.chars().nth(1).unwrap()) {
+        match parse_char_to_isize(input_string.chars().nth(1).unwrap()) {
             Ok(row_number) => row = row_number,
             Err(row_error) => {
                 println!(

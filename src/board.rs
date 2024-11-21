@@ -272,7 +272,6 @@ impl Square {
         coordinates: &Coordinates,
         board: &Board,
         legal_target_squares: &mut Vec<Coordinates>,
-        opt_previous_board: Option<&Board>,
     ) {
         for i in 0..8 {
             match ColumnLetter::construct_letter_from_isize(i) {
@@ -283,7 +282,6 @@ impl Square {
                         coordinates.number,
                         board,
                         legal_target_squares,
-                        opt_previous_board,
                     );
                     self.get_legal_single_target(
                         coordinates,
@@ -291,7 +289,6 @@ impl Square {
                         i,
                         board,
                         legal_target_squares,
-                        opt_previous_board,
                     );
                 }
                 Err(text) => {
@@ -307,7 +304,6 @@ impl Square {
         direction: DiagonalDirection,
         board: &Board,
         legal_target_squares: &mut Vec<Coordinates>,
-        opt_previous_board: Option<&Board>,
     ) {
         let mut moving_letter_value = coordinates.letter.eval();
         let mut moving_number_value = coordinates.number;
@@ -330,7 +326,6 @@ impl Square {
                         moving_number_value,
                         board,
                         legal_target_squares,
-                        opt_previous_board,
                     );
                 }
                 Err(_) => {
@@ -345,14 +340,12 @@ impl Square {
         coordinates: &Coordinates,
         board: &Board,
         legal_target_squares: &mut Vec<Coordinates>,
-        opt_previous_board: Option<&Board>,
     ) {
         self.get_legal_single_diagonal(
             coordinates,
             DiagonalDirection::UpRight,
             board,
             legal_target_squares,
-            opt_previous_board,
         );
 
         self.get_legal_single_diagonal(
@@ -360,7 +353,6 @@ impl Square {
             DiagonalDirection::DownRight,
             board,
             legal_target_squares,
-            opt_previous_board,
         );
 
         self.get_legal_single_diagonal(
@@ -368,7 +360,6 @@ impl Square {
             DiagonalDirection::UpLeft,
             board,
             legal_target_squares,
-            opt_previous_board,
         );
 
         self.get_legal_single_diagonal(
@@ -376,7 +367,6 @@ impl Square {
             DiagonalDirection::DownLeft,
             board,
             legal_target_squares,
-            opt_previous_board,
         );
     }
 
@@ -387,25 +377,19 @@ impl Square {
         row_number: isize,
         board: &Board,
         legal_target_squares: &mut Vec<Coordinates>,
-        opt_previous_board: Option<&Board>,
     ) {
         let investigating_coordinates = Coordinates {
             letter: col_letter,
             number: row_number,
         };
-        let (move_legal, _, _, _, _, _, _) =
-            parse_move_legality(from, &investigating_coordinates, board, opt_previous_board);
+        let (move_legal, _, _, _, _, _, _, _) =
+            parse_move_legality(from, &investigating_coordinates, board);
         if move_legal {
             legal_target_squares.push(investigating_coordinates);
         }
     }
 
-    pub fn get_legal_targets(
-        &self,
-        coordinates: &Coordinates,
-        board: &Board,
-        opt_previous_board: Option<&Board>,
-    ) -> Vec<Coordinates> {
+    pub fn get_legal_targets(&self, coordinates: &Coordinates, board: &Board) -> Vec<Coordinates> {
         let mut legal_target_squares: Vec<Coordinates> = Vec::new();
 
         match self {
@@ -434,7 +418,6 @@ impl Square {
                             coordinates.number + single_step,
                             board,
                             &mut legal_target_squares,
-                            opt_previous_board,
                         );
 
                         //double jump. We can let parsing handle the legality.
@@ -444,7 +427,6 @@ impl Square {
                             coordinates.number + double_step,
                             board,
                             &mut legal_target_squares,
-                            opt_previous_board,
                         );
 
                         //now lets try the two attack vectors
@@ -460,7 +442,6 @@ impl Square {
                                         coordinates.number + single_step,
                                         board,
                                         &mut legal_target_squares,
-                                        opt_previous_board,
                                     );
                                 }
                                 Err(_) => {
@@ -470,12 +451,7 @@ impl Square {
                         }
                     }
                     PieceKind::Rook => {
-                        self.get_legal_cross_targets(
-                            coordinates,
-                            board,
-                            &mut legal_target_squares,
-                            opt_previous_board,
-                        );
+                        self.get_legal_cross_targets(coordinates, board, &mut legal_target_squares);
                     }
                     PieceKind::Knight => {
                         let row_alters: Vec<(isize, isize)> =
@@ -491,7 +467,6 @@ impl Square {
                                         coordinates.number + alter_b,
                                         board,
                                         &mut legal_target_squares,
-                                        opt_previous_board,
                                     );
                                 }
                                 Err(_) => {
@@ -508,7 +483,6 @@ impl Square {
                                         coordinates.number + alter_a,
                                         board,
                                         &mut legal_target_squares,
-                                        opt_previous_board,
                                     );
                                 }
                                 Err(_) => {
@@ -522,21 +496,14 @@ impl Square {
                             coordinates,
                             board,
                             &mut legal_target_squares,
-                            opt_previous_board,
                         );
                     }
                     PieceKind::Queen => {
-                        self.get_legal_cross_targets(
-                            coordinates,
-                            board,
-                            &mut legal_target_squares,
-                            opt_previous_board,
-                        );
+                        self.get_legal_cross_targets(coordinates, board, &mut legal_target_squares);
                         self.get_legal_diagonal_targets(
                             coordinates,
                             board,
                             &mut legal_target_squares,
-                            opt_previous_board,
                         );
                     }
                     PieceKind::King => {
@@ -553,7 +520,6 @@ impl Square {
                                             coordinates.number + row_mod,
                                             board,
                                             &mut legal_target_squares,
-                                            opt_previous_board,
                                         );
                                     }
                                     Err(_) => {
@@ -570,13 +536,8 @@ impl Square {
         legal_target_squares
     }
 
-    pub fn show_me_legal_squares(
-        &self,
-        coordinates: &Coordinates,
-        board: &Board,
-        opt_previous_board: Option<&Board>,
-    ) {
-        let legal_squares = self.get_legal_targets(coordinates, board, opt_previous_board);
+    pub fn show_me_legal_squares(&self, coordinates: &Coordinates, board: &Board) {
+        let legal_squares = self.get_legal_targets(coordinates, board);
         for target in legal_squares {
             print!("{} ", target);
         }
@@ -759,8 +720,11 @@ impl fmt::Display for MoveResult {
 pub struct Board {
     rows: [Row; 8],
     turn: PieceColor,
+    opt_legal_passant_square: Option<Coordinates>,
     white_side_information: SideInformation,
     black_side_information: SideInformation,
+    half_turns: u32,
+    full_turns: u32,
 }
 
 impl Board {
@@ -777,27 +741,40 @@ impl Board {
                 Row::default_back_row(PieceColor::White),
             ],
             turn: PieceColor::White,
+            opt_legal_passant_square: None,
             white_side_information: SideInformation::default(PieceColor::White),
             black_side_information: SideInformation::default(PieceColor::Black),
+            half_turns: 0,
+            full_turns: 1,
         }
     }
 
     pub fn new(
         input_rows: [Row; 8],
         current_turn: PieceColor,
+        input_passant_square: Option<Coordinates>,
         input_white_side: SideInformation,
         input_black_side: SideInformation,
+        input_half_turns: u32,
+        input_full_turns: u32,
     ) -> Board {
         Board {
             rows: input_rows,
             turn: current_turn,
+            opt_legal_passant_square: input_passant_square,
             white_side_information: input_white_side,
             black_side_information: input_black_side,
+            half_turns: input_half_turns,
+            full_turns: input_full_turns,
         }
     }
 
     pub fn get_turn(&self) -> PieceColor {
         self.turn
+    }
+
+    pub fn get_opt_passant_square(&self) -> Option<Coordinates> {
+        self.opt_legal_passant_square
     }
 
     pub fn get_turn_full(&self) -> &'static str {
@@ -821,15 +798,12 @@ impl Board {
         return_vector
     }
 
-    pub fn legal_move_available(&self, opt_previous_turn_board: Option<&Board>) -> bool {
+    pub fn legal_move_available(&self) -> bool {
         let mut legal_move_available = false;
         for coordinate in Self::board_coords() {
             match self.retreive_square(&coordinate) {
                 Ok(square) => {
-                    if !square
-                        .get_legal_targets(&coordinate, self, opt_previous_turn_board)
-                        .is_empty()
-                    {
+                    if !square.get_legal_targets(&coordinate, self).is_empty() {
                         // if it's not empty we know that there are legal targets that would not put the king in danger, so we can break early. We only need one legal move to be available
                         legal_move_available = true;
                         break;
@@ -844,14 +818,10 @@ impl Board {
         legal_move_available
     }
 
-    pub fn show_me_legal_squares(
-        &self,
-        coords: &Coordinates,
-        opt_previous_turn_board: Option<&Board>,
-    ) {
+    pub fn show_me_legal_squares(&self, coords: &Coordinates) {
         match self.retreive_square(coords) {
             Ok(retrieved_square) => {
-                retrieved_square.show_me_legal_squares(coords, self, opt_previous_turn_board);
+                retrieved_square.show_me_legal_squares(coords, self);
             }
             Err(_) => {}
         }
@@ -1052,7 +1022,6 @@ impl Board {
                                     if self.square_threatens_square(
                                         &from_coords,
                                         &target_king_coordinates,
-                                        None,
                                     ) {
                                         // oops, we found a square that threatens the king. Can't allow that!
                                         return true;
@@ -1072,19 +1041,13 @@ impl Board {
         false
     }
 
-    pub fn square_threatens_square(
-        &self,
-        from: &Coordinates,
-        to: &Coordinates,
-        opt_previous_board: Option<&Board>,
-    ) -> bool {
+    pub fn square_threatens_square(&self, from: &Coordinates, to: &Coordinates) -> bool {
         match self.retreive_square(from) {
             Ok(found_square) => {
                 match found_square {
                     Square::Full(piece) => {
                         let distance_information = measure_distance(from, to);
-                        let (legal, _, _, _, _, _, _) =
-                            parse_move_legality(from, to, self, opt_previous_board);
+                        let (legal, _, _, _, _, _, _, _) = parse_move_legality(from, to, self);
                         if legal {
                             match piece.kind {
                                 PieceKind::Pawn => {
@@ -1416,14 +1379,10 @@ impl Board {
         }
     }
 
-    pub fn move_piece(
-        &mut self,
-        from: &Coordinates,
-        to: &Coordinates,
-        opt_previous_turn_board: Option<&Board>,
-    ) -> MoveResult {
+    pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) -> MoveResult {
         let move_result: MoveResult;
         let opt_from_square = self.retreive_square(&from);
+        let opt_new_passant_square: Option<Coordinates> = None;
         match opt_from_square {
             Ok(from_square) => {
                 let replacement_square = from_square.clone();
@@ -1438,7 +1397,8 @@ impl Board {
                                 move_direction,
                                 move_distance,
                                 opt_passant_target,
-                            ) = parse_move_legality(from, to, self, opt_previous_turn_board);
+                                opt_new_passant_legal,
+                            ) = parse_move_legality(from, to, self);
 
                             if move_legal {
                                 // if we're moving the king we need to update his coords
@@ -1466,6 +1426,7 @@ impl Board {
                                     }
                                     _ => {}
                                 }
+                                self.opt_legal_passant_square = opt_new_passant_legal;
                                 self.set_square(&from, Square::Empty);
                                 self.set_square(&to, replacement_square);
                                 match opt_passant_target {
@@ -1477,8 +1438,12 @@ impl Board {
                                 if taking_piece {
                                     self.add_piece_to_kills(target_piece_kind, target_piece_color);
                                 }
+                                self.half_turns += 1;
                                 match self.turn {
-                                    PieceColor::Black => self.turn = PieceColor::White,
+                                    PieceColor::Black => {
+                                        self.turn = PieceColor::White;
+                                        self.full_turns += 1;
+                                    }
                                     PieceColor::White => self.turn = PieceColor::Black,
                                 }
                                 let opponent_color = match piece.color {
@@ -1486,11 +1451,7 @@ impl Board {
                                     PieceColor::White => PieceColor::Black,
                                 };
                                 //we can make the move they are requesting. Lets check what state this leaves the board in.
-                                match king_checkmate_state(
-                                    opponent_color,
-                                    &self,
-                                    opt_previous_turn_board,
-                                ) {
+                                match king_checkmate_state(opponent_color, &self) {
                                     MateState::Check => match opponent_color {
                                         PieceColor::Black => {
                                             move_result = MoveResult::BlackKingChecked;

@@ -8,13 +8,9 @@ pub enum MateState {
     Safe,
 }
 
-pub fn king_checkmate_state(
-    king_color: PieceColor,
-    chess_board: &Board,
-    opt_previous_turn_board: Option<&Board>,
-) -> MateState {
+pub fn king_checkmate_state(king_color: PieceColor, chess_board: &Board) -> MateState {
     let king_currently_in_danger = chess_board.is_king_in_danger(king_color);
-    let legal_move_available = chess_board.legal_move_available(opt_previous_turn_board);
+    let legal_move_available = chess_board.legal_move_available();
 
     match (king_currently_in_danger, legal_move_available) {
         (true, true) => MateState::Check,
@@ -72,76 +68,17 @@ fn square_meets_expectations(
     meets_expectations
 }
 
-pub fn en_passant_legal(
-    target_pawn_color: PieceColor,
-    from: &Coordinates,
-    to: &Coordinates,
-    previous_turn_board: &Board,
-    current_turn_board: &Board,
-) -> bool {
-    //if we're here we can safely assume that the move they're trying to do is en passant.
-    let mut move_legal = false;
-    //lets triangulate the target square.
-    let current_turn_coords = Coordinates {
-        letter: to.letter,
-        number: from.number,
-    };
-    let previous_turn_coords = match target_pawn_color {
-        PieceColor::White => Coordinates {
-            letter: to.letter,
-            number: current_turn_coords.number - 2,
-        },
-        PieceColor::Black => Coordinates {
-            letter: to.letter,
-            number: current_turn_coords.number + 2,
-        },
-    };
-
-    //for this to be legal, 3 things must be true.
-    //1. there must be a pawn (of the opposite color) in the target square
-    //2. that square must have been empty the previous turn.
-    //3. that pawn must have moved from 2 squares away the previous turn; ie: the square should then have been empty,
-    //   and the square "above" it must have been empty. Since we legality check all other moves, there's no other way
-    //   to get a pawn into that position
-
-    let current_target_square_as_expected = square_meets_expectations(
-        current_turn_board,
-        &current_turn_coords,
-        false,
-        target_pawn_color,
-        PieceKind::Pawn,
-    );
-
-    if current_target_square_as_expected {
-        let current_left_square_as_expected = square_meets_expectations(
-            current_turn_board,
-            &previous_turn_coords,
-            true,
-            target_pawn_color,
-            PieceKind::Pawn,
-        );
-        if current_left_square_as_expected {
-            let previous_turn_left_square_meets_expectations = square_meets_expectations(
-                previous_turn_board,
-                &previous_turn_coords,
-                false,
-                target_pawn_color,
-                PieceKind::Pawn,
-            );
-            if previous_turn_left_square_meets_expectations {
-                move_legal = true;
-            }
-        }
+pub fn passant_legal(to: &Coordinates, board: &Board) -> bool {
+    match board.get_opt_passant_square() {
+        Some(passant_square) => *to == passant_square,
+        None => false,
     }
-
-    move_legal
 }
 
 pub fn parse_move_legality(
     from: &Coordinates,
     to: &Coordinates,
     chess_board: &Board,
-    opt_previous_turn_board: Option<&Board>,
 ) -> (
     bool,
     bool,
@@ -149,6 +86,7 @@ pub fn parse_move_legality(
     PieceKind,
     MoveDirection,
     isize,
+    Option<Coordinates>,
     Option<Coordinates>,
 ) {
     let opt_from_square = chess_board.retreive_square(&from);
@@ -160,6 +98,7 @@ pub fn parse_move_legality(
     let mut taking_piece = false;
     let mut color_legal = false;
     let mut opt_passant_removal = None;
+    let mut opt_passant_target: Option<Coordinates> = None;
 
     //we can skip a lot of work by just checking that from and to are valid locations
     match opt_from_square {
@@ -234,9 +173,23 @@ pub fn parse_move_legality(
                                                             match from_piece.color {
                                                                 PieceColor::Black => {
                                                                     successful = from.number == 7;
+                                                                    if successful {
+                                                                        opt_passant_target =
+                                                                            Some(Coordinates {
+                                                                                letter: from.letter,
+                                                                                number: 6,
+                                                                            });
+                                                                    }
                                                                 }
                                                                 PieceColor::White => {
                                                                     successful = from.number == 2;
+                                                                    if successful {
+                                                                        opt_passant_target =
+                                                                            Some(Coordinates {
+                                                                                letter: from.letter,
+                                                                                number: 3,
+                                                                            });
+                                                                    }
                                                                 }
                                                             }
                                                         }
@@ -244,33 +197,22 @@ pub fn parse_move_legality(
                                                         | MoveDirection::DownRight
                                                         | MoveDirection::UpLeft
                                                         | MoveDirection::UpRight => {
-                                                            match opt_previous_turn_board {
-                                                                Some(previous_board) => {
-                                                                    successful = en_passant_legal(
-                                                                        from_piece
-                                                                            .color
-                                                                            .get_inverse_color(),
-                                                                        from,
-                                                                        to,
-                                                                        previous_board,
-                                                                        chess_board,
-                                                                    );
-                                                                    if successful {
-                                                                        taking_piece = true;
-                                                                        target_square_piece_color =
-                                                                            from_piece
-                                                                                .color
-                                                                                .get_inverse_color();
-                                                                        target_square_piece_kind =
-                                                                            PieceKind::Pawn;
-                                                                        opt_passant_removal =
-                                                                            Some(Coordinates {
-                                                                                letter: to.letter,
-                                                                                number: from.number,
-                                                                            });
-                                                                    }
-                                                                }
-                                                                None => {}
+                                                            successful =
+                                                                passant_legal(to, chess_board);
+
+                                                            if successful {
+                                                                taking_piece = true;
+                                                                target_square_piece_color =
+                                                                    from_piece
+                                                                        .color
+                                                                        .get_inverse_color();
+                                                                target_square_piece_kind =
+                                                                    PieceKind::Pawn;
+                                                                opt_passant_removal =
+                                                                    Some(Coordinates {
+                                                                        letter: to.letter,
+                                                                        number: from.number,
+                                                                    });
                                                             }
                                                         }
                                                         _ => {}
@@ -370,5 +312,6 @@ pub fn parse_move_legality(
         move_information.move_direction,
         move_information.distance,
         opt_passant_removal,
+        opt_passant_target,
     )
 }

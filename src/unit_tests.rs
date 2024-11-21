@@ -163,14 +163,17 @@ fn test_pawn_single_step() {
             Row::default_back_row(PieceColor::White),
         ],
         PieceColor::Black,
+        None,
         SideInformation::default(PieceColor::White),
         SideInformation::default(PieceColor::Black),
+        1,
+        1,
     );
 
     let pawn_from_coords = Coordinates::new(ColumnLetter::A, 2);
     let pawn_to_coords = Coordinates::new(ColumnLetter::A, 3);
 
-    default_board.move_piece(&pawn_from_coords, &pawn_to_coords, None);
+    default_board.move_piece(&pawn_from_coords, &pawn_to_coords);
 
     let boards_equal = default_board == stepped_board;
     assert!(boards_equal);
@@ -203,16 +206,23 @@ pub fn test_pawn_double_step() {
             Row::default_back_row(PieceColor::White),
         ],
         PieceColor::Black,
+        Some(Coordinates {
+            letter: ColumnLetter::A,
+            number: 3,
+        }),
         SideInformation::default(PieceColor::White),
         SideInformation::default(PieceColor::Black),
+        1,
+        1,
     );
 
     let pawn_from_coords = Coordinates::new(ColumnLetter::A, 2);
     let pawn_to_coords = Coordinates::new(ColumnLetter::A, 4);
 
-    default_board.move_piece(&pawn_from_coords, &pawn_to_coords, None);
+    default_board.move_piece(&pawn_from_coords, &pawn_to_coords);
 
     let boards_equal = default_board == stepped_board;
+
     assert!(boards_equal);
 }
 
@@ -223,7 +233,7 @@ pub fn test_wrong_side_turn() {
     let pawn_from = Coordinates::new(ColumnLetter::A, 7);
     let pawn_to = Coordinates::new(ColumnLetter::A, 6);
 
-    let move_result = default_board.move_piece(&pawn_from, &pawn_to, None);
+    let move_result = default_board.move_piece(&pawn_from, &pawn_to);
 
     assert_eq!(move_result, MoveResult::WrongTurn);
 }
@@ -251,8 +261,11 @@ pub fn test_en_passant_should_pass() {
             Row::default_back_row(PieceColor::White),
         ],
         PieceColor::Black,
+        None,
         SideInformation::default(PieceColor::White),
         SideInformation::default(PieceColor::Black),
+        0,
+        1,
     );
 
     let current_black_pawn_square_coords = Coordinates {
@@ -269,7 +282,6 @@ pub fn test_en_passant_should_pass() {
     let move_result = current_turn_board.move_piece(
         &current_black_pawn_square_coords,
         &black_pawn_jump_target_coords,
-        None,
     );
     assert!(move_result == MoveResult::CompletedSafely);
 
@@ -282,11 +294,8 @@ pub fn test_en_passant_should_pass() {
         letter: ColumnLetter::E,
         number: 6,
     };
-    let en_passant_move_result = current_turn_board.move_piece(
-        &white_pawn_from_square,
-        &white_pawn_to_square,
-        Some(&previous_turn_board),
-    );
+    let en_passant_move_result =
+        current_turn_board.move_piece(&white_pawn_from_square, &white_pawn_to_square);
 
     assert!(en_passant_move_result == MoveResult::CompletedSafely);
 
@@ -296,7 +305,7 @@ pub fn test_en_passant_should_pass() {
 #[test]
 fn test_basic_read() {
     println!("RUNNING TEST BASIC READ");
-    let result = ingest_fen_file("./src/fenFiles/basic.fen");
+    let result = ingest_fen_file("./src/fenFiles/default_board.fen");
 
     assert!(result == Some(Board::default()));
 }
