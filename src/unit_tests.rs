@@ -166,7 +166,7 @@ fn test_pawn_single_step() {
         None,
         SideInformation::default(PieceColor::White),
         SideInformation::default(PieceColor::Black),
-        1,
+        0,
         1,
     );
 
@@ -212,7 +212,7 @@ pub fn test_pawn_double_step() {
         }),
         SideInformation::default(PieceColor::White),
         SideInformation::default(PieceColor::Black),
-        1,
+        0,
         1,
     );
 

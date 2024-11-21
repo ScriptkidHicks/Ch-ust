@@ -1380,7 +1380,7 @@ impl Board {
     }
 
     pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) -> MoveResult {
-        let move_result: MoveResult;
+        let mut move_result: MoveResult;
         let opt_from_square = self.retreive_square(&from);
         let opt_new_passant_square: Option<Coordinates> = None;
         match opt_from_square {
@@ -1438,11 +1438,14 @@ impl Board {
                                 if taking_piece {
                                     self.add_piece_to_kills(target_piece_kind, target_piece_color);
                                 }
-                                self.half_turns += 1;
+                                if taking_piece || piece.kind == PieceKind::Pawn {
+                                    self.half_turns = 0;
+                                } else {
+                                    self.half_turns += 1;
+                                }
                                 match self.turn {
                                     PieceColor::Black => {
                                         self.turn = PieceColor::White;
-                                        self.full_turns += 1;
                                     }
                                     PieceColor::White => self.turn = PieceColor::Black,
                                 }
@@ -1490,6 +1493,10 @@ impl Board {
             Err(_) => {
                 move_result = MoveResult::MoveIllegal;
             }
+        }
+
+        if self.half_turns == 100 {
+            move_result = MoveResult::Stalemate;
         }
 
         move_result
