@@ -543,6 +543,16 @@ impl Square {
         }
         println!();
     }
+
+    pub fn get_fen_value(&self) -> String {
+        match self {
+            Self::Full(piece) => piece.get_fen_string(),
+            Square::Empty => {
+                //we will just return an empty string if the square is empty, and handle it higher up
+                "".to_string()
+            }
+        }
+    }
 }
 
 impl fmt::Display for Square {
@@ -554,7 +564,7 @@ impl fmt::Display for Square {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Row {
     squares: [Square; 8],
 }
@@ -632,6 +642,30 @@ impl Row {
     pub fn set_square(&mut self, index: usize, square: Square) {
         self.squares[index] = square;
     }
+
+    pub fn generate_row_fen_string(&self) -> String {
+        let mut accum_string = String::new();
+        let mut empty_square_count = 0;
+
+        for square in self.squares.iter() {
+            let square_string = square.get_fen_value();
+
+            if square_string == "" {
+                empty_square_count += 1;
+            } else {
+                if empty_square_count != 0 {
+                    accum_string.push_str(empty_square_count.to_string().as_str());
+                    empty_square_count = 0;
+                }
+
+                accum_string.push_str(&square_string);
+            }
+        }
+        if empty_square_count != 0 {
+            accum_string.push_str(empty_square_count.to_string().as_str());
+        }
+        accum_string
+    }
 }
 
 #[derive(Clone, PartialEq)]
@@ -665,6 +699,20 @@ impl SideInformation {
                 },
             },
         }
+    }
+
+    pub fn generate_fen_string(&self) -> String {
+        let mut accum_string = String::new();
+
+        if self.can_castle_kingside {
+            accum_string.push('k');
+        }
+
+        if self.can_castle_queenside {
+            accum_string.push('q');
+        }
+
+        accum_string
     }
 
     pub fn set_castling_rights(&mut self, kingside: bool, queenside: bool) {
@@ -781,6 +829,68 @@ impl Board {
             half_turns: input_half_turns,
             full_turns: input_full_turns,
         }
+    }
+
+    pub fn generate_fen_string(&self) -> String {
+        let mut fen_output = String::new();
+
+        for (index, row) in self.rows.iter().enumerate() {
+            let mut rowstring = row.generate_row_fen_string();
+            if index == 7 {
+                rowstring.push(' ');
+            } else {
+                rowstring.push('/');
+            }
+            fen_output.push_str(rowstring.as_str());
+        }
+
+        //ok, we've dealt with rows, lets try doing the turn
+        fen_output.push_str(match self.turn {
+            PieceColor::Black => "b ",
+            PieceColor::White => "w ",
+        });
+
+        //alright, now lets go get the castling rights.
+        let mut castling_rights = String::new();
+
+        castling_rights.push_str(
+            &self
+                .white_side_information
+                .generate_fen_string()
+                .to_uppercase(),
+        );
+
+        castling_rights.push_str(&self.black_side_information.generate_fen_string());
+
+        if (castling_rights.is_empty()) {
+            castling_rights.push('-');
+        }
+
+        castling_rights.push(' ');
+
+        fen_output.push_str(&castling_rights);
+
+        //ok, now lets see if there's an en passant square.
+        match self.get_opt_passant_square() {
+            Some(passant_square) => {
+                fen_output.push_str(passant_square.letter.to_string().to_lowercase().as_str());
+                fen_output.push_str(passant_square.number.to_string().as_str());
+                fen_output.push(' ');
+            }
+            None => {
+                fen_output.push_str("- ");
+            }
+        }
+
+        //finally lets get half and full turns.
+        fen_output.push_str(self.half_turns.to_string().as_str());
+        fen_output.push(' ');
+
+        fen_output.push_str(self.full_turns.to_string().as_str());
+
+        //and we're done
+
+        fen_output
     }
 
     pub fn display_sides_information(&self) {

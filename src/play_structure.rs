@@ -1,21 +1,30 @@
-use std::io::stdin;
+use std::{
+    fs::File,
+    io::{stdin, Write},
+};
 
 use crate::{
-    base_tools::alienify_output_text, board::*, fen_parser::ingest_fen_file,
-    interface::parse_square, pieces::PieceColor,
+    base_tools::alienify_output_text,
+    board::*,
+    fen_parser::{ingest_fen_file, path_exists},
+    interface::parse_square,
+    pieces::PieceColor,
 };
 
 fn play_chess(opt_board_input: Option<Board>) {
     let white_turn_string = "WHITE TO MOVE";
     let black_turn_string = "BLACK TO MOVE";
     let mut game_not_over = true;
-    let mut current_board = match opt_board_input {
-        Some(board) => board,
-        None => Board::default(),
-    };
+    let mut current_board = Board::default();
+
+    match opt_board_input {
+        Some(board) => current_board = board.clone(),
+        None => {}
+    }
     let mut board_states: Vec<Board> = Vec::new();
     while game_not_over {
-        let turn_string = if current_board.get_turn() == PieceColor::White {
+        let current_turn = current_board.get_turn().clone();
+        let turn_string = if current_turn == PieceColor::White {
             white_turn_string
         } else {
             black_turn_string
@@ -28,7 +37,8 @@ fn play_chess(opt_board_input: Option<Board>) {
         alienify_output_text("1: move");
         alienify_output_text("2: show legal moves from square");
         alienify_output_text("3: show previous turn");
-        alienify_output_text("4: surrender");
+        alienify_output_text("4: Save this game");
+        alienify_output_text("5: surrender");
 
         let mut indication = String::new();
 
@@ -48,12 +58,15 @@ fn play_chess(opt_board_input: Option<Board>) {
             1 => match move_piece_on_board(&mut current_board, &mut board_states) {
                 MoveResult::BlackKingCheckmated => {
                     alienify_output_text("Black king has been put in checkmate. The game is over.");
+                    game_not_over = false
                 }
                 MoveResult::WhiteKingCheckmated => {
                     alienify_output_text("White king has been put in checkmate. The game is over.");
+                    game_not_over = false;
                 }
                 MoveResult::Stalemate => {
                     println!("The game has ended in a stalemate!");
+                    game_not_over = false;
                 }
                 _ => {}
             },
@@ -68,6 +81,10 @@ fn play_chess(opt_board_input: Option<Board>) {
                 }
             }
             4 => {
+                save_to_fen_file(current_board.clone());
+                game_not_over = false;
+            }
+            5 => {
                 println!("{} has surrendered.", current_board.get_turn_full());
                 game_not_over = false;
             }
@@ -299,9 +316,9 @@ pub fn handle_fen_import() {
             .read_line(&mut indication)
             .expect("Failed to read line");
 
-        let indication = indication.trim(); //need to remove the newline that will occur on input.
+        let trimmed_indication = indication.trim(); //need to remove the newline that will occur on input.
 
-        match ingest_fen_file(indication) {
+        match ingest_fen_file(trimmed_indication) {
             Some(board) => {
                 println!("the board exists");
                 loop {
@@ -341,6 +358,35 @@ pub fn handle_fen_import() {
             None => {
                 //inget fen file will handle telling the user about what went wrong.
             }
+        }
+    }
+}
+
+pub fn save_to_fen_file(board: Board) {
+    loop {
+        alienify_output_text("Please enter a name of the file you would like to save the game to:");
+        let mut indication = String::new();
+
+        stdin()
+            .read_line(&mut indication)
+            .expect("Failed to read line");
+
+        let trimmed_indication = indication.trim();
+
+        if path_exists(trimmed_indication) {
+            println!(
+                "Hey, that file already exists! I can't have you deleting files that already exist!"
+            );
+        } else {
+            let mut fen_file = File::create(trimmed_indication).expect("creation failed");
+
+            // Write contents to the file
+            fen_file
+                .write(board.generate_fen_string().as_bytes())
+                .expect("write failed");
+
+            println!("Created a file data.txt");
+            break;
         }
     }
 }
