@@ -701,7 +701,14 @@ impl SideInformation {
         }
     }
 
-    pub fn adjust_taken_pieces(&mut self, taken_pawns: i32, taken_rooks: i32, taken_knights: i32, taken_bishops: i32, taken_queens: i32) {
+    pub fn adjust_taken_pieces(
+        &mut self,
+        taken_pawns: i32,
+        taken_rooks: i32,
+        taken_knights: i32,
+        taken_bishops: i32,
+        taken_queens: i32,
+    ) {
         self.taken_pieces.clear();
 
         for _ in 0..taken_pawns {
@@ -736,19 +743,19 @@ impl SideInformation {
             match piece {
                 PieceKind::Pawn => {
                     pawn_count += 1;
-                },
+                }
                 PieceKind::Rook => {
                     rook_count += 1;
                 }
                 PieceKind::Knight => {
                     knight_count += 1;
-                },
+                }
                 PieceKind::Bishop => {
                     bishop_count += 1;
-                },
+                }
                 PieceKind::Queen => {
                     queen_count += 1;
-                },
+                }
                 PieceKind::King => {
                     panic!("Oops! A king somehow made its way into your taken pieces!");
                 }
@@ -773,7 +780,7 @@ impl SideInformation {
             self.taken_pieces.push(PieceKind::Bishop);
         }
 
-        for _ in 0..queen_count  {
+        for _ in 0..queen_count {
             self.taken_pieces.push(PieceKind::Queen);
         }
     }
@@ -1716,7 +1723,6 @@ impl Board {
             PieceColor::Black => self.white_side_information.add_taken_piece(piece_kind),
             PieceColor::White => self.black_side_information.add_taken_piece(piece_kind),
         }
-        
     }
 
     pub fn adjust_taken_pieces(&mut self) {
@@ -1737,56 +1743,51 @@ impl Board {
         for row in self.rows.iter() {
             for square in row.squares.iter() {
                 match square {
-                    Square::Full(piece) => {
-                        match piece.kind {
-                            PieceKind::Pawn => {
-                                if piece.color == PieceColor::Black {
-                                    black_pawn_count += 1;
-                                } else {
-                                    white_pawn_count += 1;
-                                }
-
-                            },
-                            PieceKind::Rook => {
-                                if piece.color == PieceColor::Black {
-                                    black_rook_count += 1;
-                                } else {
-                                    white_rook_count += 1;
-                                }
-                            },
-                            PieceKind::Knight => {
-                                if piece.color == PieceColor::Black {
-                                    black_knight_count += 1;
-                                } else {
-                                    white_knight_count += 1;
-                                }
-                            },
-                            PieceKind::Bishop => {
-                                if piece.color == PieceColor::Black {
-                                    black_bishop_count += 1;
-                                } else {
-                                    white_bishop_count += 1;
-                                }
-                            },
-                            PieceKind::Queen => {
-                                if piece.color == PieceColor::Black {
-                                    black_queen_count += 1;
-                                } else {
-                                    white_queen_count += 1;
-                                }
-                            },
-                            PieceKind::King => {
-                                if piece.color == PieceColor::Black {
-                                    black_king_count += 1;
-                                } else {
-                                    white_king_count += 1;
-                                }
+                    Square::Full(piece) => match piece.kind {
+                        PieceKind::Pawn => {
+                            if piece.color == PieceColor::Black {
+                                black_pawn_count += 1;
+                            } else {
+                                white_pawn_count += 1;
+                            }
+                        }
+                        PieceKind::Rook => {
+                            if piece.color == PieceColor::Black {
+                                black_rook_count += 1;
+                            } else {
+                                white_rook_count += 1;
+                            }
+                        }
+                        PieceKind::Knight => {
+                            if piece.color == PieceColor::Black {
+                                black_knight_count += 1;
+                            } else {
+                                white_knight_count += 1;
+                            }
+                        }
+                        PieceKind::Bishop => {
+                            if piece.color == PieceColor::Black {
+                                black_bishop_count += 1;
+                            } else {
+                                white_bishop_count += 1;
+                            }
+                        }
+                        PieceKind::Queen => {
+                            if piece.color == PieceColor::Black {
+                                black_queen_count += 1;
+                            } else {
+                                white_queen_count += 1;
+                            }
+                        }
+                        PieceKind::King => {
+                            if piece.color == PieceColor::Black {
+                                black_king_count += 1;
+                            } else {
+                                white_king_count += 1;
                             }
                         }
                     },
-                    Square::Empty => {
-
-                    }
+                    Square::Empty => {}
                 }
             }
         }
@@ -1811,8 +1812,20 @@ impl Board {
         black_queen_count = 1 - black_queen_count;
         white_queen_count = 1 - white_queen_count;
 
-        self.black_side_information.adjust_taken_pieces(black_pawn_count, black_rook_count, black_knight_count, black_bishop_count, black_queen_count);
-        self.white_side_information.adjust_taken_pieces(white_pawn_count, white_rook_count, white_knight_count, white_bishop_count, white_queen_count);
+        self.white_side_information.adjust_taken_pieces(
+            black_pawn_count,
+            black_rook_count,
+            black_knight_count,
+            black_bishop_count,
+            black_queen_count,
+        );
+        self.black_side_information.adjust_taken_pieces(
+            white_pawn_count,
+            white_rook_count,
+            white_knight_count,
+            white_bishop_count,
+            white_queen_count,
+        );
     }
 
     pub fn show_taken_pieces(&self, color: PieceColor) {

@@ -320,19 +320,34 @@ fn test_basic_read() {
 fn test_read_board_with_pawn_steps() {
     let mut origin_board = Board::default();
 
-
-
-    origin_board.move_piece(&Coordinates{letter: ColumnLetter::C, number: 2}, &Coordinates{letter: ColumnLetter::C, number: 4});
-    origin_board.move_piece(&Coordinates{letter: ColumnLetter::D, number: 7}, &Coordinates{letter: ColumnLetter::D, number: 5});
+    origin_board.move_piece(
+        &Coordinates {
+            letter: ColumnLetter::C,
+            number: 2,
+        },
+        &Coordinates {
+            letter: ColumnLetter::C,
+            number: 4,
+        },
+    );
+    origin_board.move_piece(
+        &Coordinates {
+            letter: ColumnLetter::D,
+            number: 7,
+        },
+        &Coordinates {
+            letter: ColumnLetter::D,
+            number: 5,
+        },
+    );
 
     let opt_pulled_board = ingest_fen_file("./src/fenFiles/two_stepped_pawns.fen");
 
     match opt_pulled_board {
-
         Some(pulled_board) => {
             println!("{}", origin_board.generate_fen_string());
             assert!(origin_board == pulled_board);
-        },
+        }
         None => {
             assert!(false)
         }
@@ -343,10 +358,78 @@ fn test_read_board_with_pawn_steps() {
 pub fn test_ingesting_fen_with_two_taken_pieces() {
     let opt_pulled_board = ingest_fen_file("./src/fenFiles/two_taken_pieces.fen");
 
+    let mut moving_board = Board::default();
+
+    moving_board.move_piece(
+        &Coordinates {
+            letter: ColumnLetter::C,
+            number: 2,
+        },
+        &Coordinates {
+            letter: ColumnLetter::C,
+            number: 4,
+        },
+    );
+
+    moving_board.move_piece(
+        &Coordinates {
+            letter: ColumnLetter::D,
+            number: 7,
+        },
+        &Coordinates {
+            letter: ColumnLetter::D,
+            number: 5,
+        },
+    );
+
+    moving_board.move_piece(
+        &Coordinates {
+            letter: ColumnLetter::C,
+            number: 4,
+        },
+        &Coordinates {
+            letter: ColumnLetter::D,
+            number: 5,
+        },
+    );
+
+    moving_board.move_piece(
+        &Coordinates {
+            letter: ColumnLetter::C,
+            number: 8,
+        },
+        &Coordinates {
+            letter: ColumnLetter::F,
+            number: 5,
+        },
+    );
+
+    moving_board.move_piece(
+        &Coordinates {
+            letter: ColumnLetter::D,
+            number: 5,
+        },
+        &Coordinates {
+            letter: ColumnLetter::D,
+            number: 6,
+        },
+    );
+
+    moving_board.move_piece(
+        &Coordinates {
+            letter: ColumnLetter::F,
+            number: 5,
+        },
+        &Coordinates {
+            letter: ColumnLetter::B,
+            number: 1,
+        },
+    );
+
     match opt_pulled_board {
         Some(pulled_board) => {
-            println!("{}", pulled_board);
-        },
+            assert!(pulled_board == moving_board);
+        }
         None => {
             assert!(false);
         }
