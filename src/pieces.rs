@@ -1,4 +1,5 @@
 use core::fmt;
+use std::slice::Iter;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum PieceColor {
@@ -13,6 +14,13 @@ impl PieceColor {
             PieceColor::White => PieceColor::Black,
         }
     }
+
+    pub fn iterator() -> Iter<'static, PieceColor> {
+        //do not widescope this level of letter access. Keep is strictly local
+        use PieceColor::*;
+        static LETTERS: [PieceColor; 2] = [Black, White];
+        LETTERS.iter()
+    }
 }
 
 impl fmt::Display for PieceColor {
@@ -23,6 +31,7 @@ impl fmt::Display for PieceColor {
         }
     }
 }
+
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum PieceKind {

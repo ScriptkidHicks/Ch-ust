@@ -47,7 +47,6 @@ pub fn digest_filepath_to_string(file_path: &str) -> Option<String> {
 }
 
 pub fn digest_string_to_board(file_contents: String) -> Option<Board> {
-    let opt_board_return: Option<Board>;
     let mut accum_rows: Vec<Row> = Vec::new();
     let turn_color: PieceColor;
     let white_castle_kingside: bool;
@@ -146,7 +145,7 @@ pub fn digest_string_to_board(file_contents: String) -> Option<Board> {
     let mut black_information = SideInformation::default(PieceColor::Black);
     black_information.set_castling_rights(black_castle_kingside, black_castle_queenside);
 
-    Some(Board::new(
+    let mut return_board = Board::new(
         rows_as_array,
         turn_color,
         opt_passant_square,
@@ -154,7 +153,12 @@ pub fn digest_string_to_board(file_contents: String) -> Option<Board> {
         black_information,
         half_turns,
         full_turns,
-    ))
+    );
+
+    //we need to make sure that each side displays the correct number of taken pieces.
+    return_board.adjust_taken_pieces();
+
+    Some(return_board)
 }
 
 pub fn digest_board_string_into_rows(opt_row_text: Option<&&str>, row_collection: &mut Vec<Row>) {

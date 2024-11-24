@@ -701,6 +701,83 @@ impl SideInformation {
         }
     }
 
+    pub fn adjust_taken_pieces(&mut self, taken_pawns: i32, taken_rooks: i32, taken_knights: i32, taken_bishops: i32, taken_queens: i32) {
+        self.taken_pieces.clear();
+
+        for _ in 0..taken_pawns {
+            self.taken_pieces.push(PieceKind::Pawn);
+        }
+
+        for _ in 0..taken_rooks {
+            self.taken_pieces.push(PieceKind::Rook);
+        }
+
+        for _ in 0..taken_knights {
+            self.taken_pieces.push(PieceKind::Knight);
+        }
+
+        for _ in 0..taken_bishops {
+            self.taken_pieces.push(PieceKind::Bishop);
+        }
+
+        for _ in 0..taken_queens {
+            self.taken_pieces.push(PieceKind::Queen);
+        }
+    }
+
+    pub fn sort_taken_pieces(&mut self) {
+        let mut pawn_count = 0;
+        let mut rook_count = 0;
+        let mut knight_count = 0;
+        let mut bishop_count = 0;
+        let mut queen_count = 0;
+
+        for piece in self.taken_pieces.iter() {
+            match piece {
+                PieceKind::Pawn => {
+                    pawn_count += 1;
+                },
+                PieceKind::Rook => {
+                    rook_count += 1;
+                }
+                PieceKind::Knight => {
+                    knight_count += 1;
+                },
+                PieceKind::Bishop => {
+                    bishop_count += 1;
+                },
+                PieceKind::Queen => {
+                    queen_count += 1;
+                },
+                PieceKind::King => {
+                    panic!("Oops! A king somehow made its way into your taken pieces!");
+                }
+            }
+        }
+
+        self.taken_pieces.clear();
+
+        for _ in 0..pawn_count {
+            self.taken_pieces.push(PieceKind::Pawn);
+        }
+
+        for _ in 0..rook_count {
+            self.taken_pieces.push(PieceKind::Rook);
+        }
+
+        for _ in 0..knight_count {
+            self.taken_pieces.push(PieceKind::Knight);
+        }
+
+        for _ in 0..bishop_count {
+            self.taken_pieces.push(PieceKind::Bishop);
+        }
+
+        for _ in 0..queen_count  {
+            self.taken_pieces.push(PieceKind::Queen);
+        }
+    }
+
     pub fn generate_fen_string(&self) -> String {
         let mut accum_string = String::new();
 
@@ -722,6 +799,7 @@ impl SideInformation {
 
     pub fn add_taken_piece(&mut self, piece_kind: PieceKind) {
         self.taken_pieces.push(piece_kind);
+        self.sort_taken_pieces();
     }
 
     pub fn total_taken_pieces(&self) -> u32 {
@@ -1513,7 +1591,6 @@ impl Board {
     pub fn move_piece(&mut self, from: &Coordinates, to: &Coordinates) -> MoveResult {
         let mut move_result: MoveResult;
         let opt_from_square = self.retreive_square(&from);
-        let opt_new_passant_square: Option<Coordinates> = None;
         match opt_from_square {
             Ok(from_square) => {
                 let replacement_square = from_square.clone();
@@ -1577,6 +1654,7 @@ impl Board {
                                 match self.turn {
                                     PieceColor::Black => {
                                         self.turn = PieceColor::White;
+                                        self.full_turns += 1;
                                     }
                                     PieceColor::White => self.turn = PieceColor::Black,
                                 }
@@ -1638,6 +1716,103 @@ impl Board {
             PieceColor::Black => self.white_side_information.add_taken_piece(piece_kind),
             PieceColor::White => self.black_side_information.add_taken_piece(piece_kind),
         }
+        
+    }
+
+    pub fn adjust_taken_pieces(&mut self) {
+        let mut black_pawn_count = 0;
+        let mut black_rook_count = 0;
+        let mut black_knight_count = 0;
+        let mut black_bishop_count = 0;
+        let mut black_queen_count = 0;
+        let mut black_king_count = 0;
+
+        let mut white_pawn_count = 0;
+        let mut white_rook_count = 0;
+        let mut white_knight_count = 0;
+        let mut white_bishop_count = 0;
+        let mut white_queen_count = 0;
+        let mut white_king_count = 0;
+
+        for row in self.rows.iter() {
+            for square in row.squares.iter() {
+                match square {
+                    Square::Full(piece) => {
+                        match piece.kind {
+                            PieceKind::Pawn => {
+                                if piece.color == PieceColor::Black {
+                                    black_pawn_count += 1;
+                                } else {
+                                    white_pawn_count += 1;
+                                }
+
+                            },
+                            PieceKind::Rook => {
+                                if piece.color == PieceColor::Black {
+                                    black_rook_count += 1;
+                                } else {
+                                    white_rook_count += 1;
+                                }
+                            },
+                            PieceKind::Knight => {
+                                if piece.color == PieceColor::Black {
+                                    black_knight_count += 1;
+                                } else {
+                                    white_knight_count += 1;
+                                }
+                            },
+                            PieceKind::Bishop => {
+                                if piece.color == PieceColor::Black {
+                                    black_bishop_count += 1;
+                                } else {
+                                    white_bishop_count += 1;
+                                }
+                            },
+                            PieceKind::Queen => {
+                                if piece.color == PieceColor::Black {
+                                    black_queen_count += 1;
+                                } else {
+                                    white_queen_count += 1;
+                                }
+                            },
+                            PieceKind::King => {
+                                if piece.color == PieceColor::Black {
+                                    black_king_count += 1;
+                                } else {
+                                    white_king_count += 1;
+                                }
+                            }
+                        }
+                    },
+                    Square::Empty => {
+
+                    }
+                }
+            }
+        }
+
+        if white_king_count < 1 || black_king_count < 1 {
+            panic!("Oops! It looks like you don't have a king on the board! How do you expect to win the game???");
+        }
+
+        //now lets adjust to taken counts by reduction
+        black_pawn_count = 8 - black_pawn_count;
+        white_pawn_count = 8 - white_pawn_count;
+
+        black_rook_count = 2 - black_rook_count;
+        white_rook_count = 2 - white_rook_count;
+
+        black_knight_count = 2 - black_knight_count;
+        white_knight_count = 2 - white_knight_count;
+
+        black_bishop_count = 2 - black_bishop_count;
+        white_bishop_count = 2 - white_bishop_count;
+
+        black_queen_count = 1 - black_queen_count;
+        white_queen_count = 1 - white_queen_count;
+
+        self.black_side_information.adjust_taken_pieces(black_pawn_count, black_rook_count, black_knight_count, black_bishop_count, black_queen_count);
+        self.white_side_information.adjust_taken_pieces(white_pawn_count, white_rook_count, white_knight_count, white_bishop_count, white_queen_count);
     }
 
     pub fn show_taken_pieces(&self, color: PieceColor) {

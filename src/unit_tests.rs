@@ -315,3 +315,40 @@ fn test_basic_read() {
         }
     }
 }
+
+#[test]
+fn test_read_board_with_pawn_steps() {
+    let mut origin_board = Board::default();
+
+
+
+    origin_board.move_piece(&Coordinates{letter: ColumnLetter::C, number: 2}, &Coordinates{letter: ColumnLetter::C, number: 4});
+    origin_board.move_piece(&Coordinates{letter: ColumnLetter::D, number: 7}, &Coordinates{letter: ColumnLetter::D, number: 5});
+
+    let opt_pulled_board = ingest_fen_file("./src/fenFiles/two_stepped_pawns.fen");
+
+    match opt_pulled_board {
+
+        Some(pulled_board) => {
+            println!("{}", origin_board.generate_fen_string());
+            assert!(origin_board == pulled_board);
+        },
+        None => {
+            assert!(false)
+        }
+    }
+}
+
+#[test]
+pub fn test_ingesting_fen_with_two_taken_pieces() {
+    let opt_pulled_board = ingest_fen_file("./src/fenFiles/two_taken_pieces.fen");
+
+    match opt_pulled_board {
+        Some(pulled_board) => {
+            println!("{}", pulled_board);
+        },
+        None => {
+            assert!(false);
+        }
+    }
+}
