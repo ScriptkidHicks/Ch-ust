@@ -385,7 +385,7 @@ pub fn save_to_fen_file(board: Board) {
                 .write(board.generate_fen_string().as_bytes())
                 .expect("write failed");
 
-            println!("Created a file data.txt");
+            println!("Successfully saved your game!");
             break;
         }
     }
