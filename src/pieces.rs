@@ -32,7 +32,6 @@ impl fmt::Display for PieceColor {
     }
 }
 
-
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum PieceKind {
     Pawn,
